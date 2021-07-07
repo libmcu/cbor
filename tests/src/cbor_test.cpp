@@ -139,11 +139,45 @@ TEST(cbor, ShouldDecodeByteString_WhenZeroLengthStringGiven) {
 TEST(cbor, ShouldDecodeArray_WhenSingleLevelArrayGiven) {
 	uint8_t expected[] = { 1, 2, 3 };
 	uint8_t m[] = { 0x83,0x01,0x02,0x03 };
-	uint8_t buf[8];
+	uint8_t buf[3];
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(buf, sizeof(buf), m, sizeof(m)));
 	MEMCMP_EQUAL(expected, buf, sizeof(expected));
 }
-IGNORE_TEST(cbor, ShouldDecodeArray_WhenSingleLevelWithDiffentTypeValueGiven) {
+TEST(cbor, ShouldDecodeArray_WhenEmptyArrayGiven) {
+	uint8_t expected[] = { 0 };
+	uint8_t m[] = { 0x80 };
+	uint8_t buf[3] = { 0, };
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(buf, sizeof(buf), m, sizeof(m)));
+	MEMCMP_EQUAL(expected, buf, sizeof(expected));
+}
+TEST(cbor, ShouldDecodeArray_WhenSingleLevelWithDiffentTypeValueGiven) {
+	uint8_t m[] = { 0x83,0x01,0x63,0x61,0x62,0x63,0x03 };
+	struct {
+		uint8_t u8_1;
+		char s[3];
+		uint8_t u8_2;
+	} buf;
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&buf, sizeof(buf), m, sizeof(m)));
+	LONGS_EQUAL(1, buf.u8_1);
+	LONGS_EQUAL(3, buf.u8_2);
+	MEMCMP_EQUAL("abc", buf.s, 3);
+}
+TEST(cbor, ShouldDecodeArray_WhenMultiLevelArrayGiven) {
+	uint8_t expected[] = { 1, 2, 3, 4, 5 };
+	uint8_t m[] = { 0x83,0x01,0x82,0x02,0x03,0x82,0x04,0x05 };
+	uint8_t buf[5] = { 0, };
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(buf, sizeof(buf), m, sizeof(m)));
+	MEMCMP_EQUAL(expected, buf, sizeof(expected));
+}
+TEST(cbor, ShouldDecodeArray_WhenOneByteLengthGiven) {
+	uint8_t expected[] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,
+		20,21,22,23,24,25 };
+	uint8_t m[] = { 0x98,0x19,0x01,0x02,0x03,0x04,0x05,0x06, 0x07,0x08,0x09,
+		0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,0x10,0x11,0x12,0x13,0x14,0x15,
+		0x16,0x17,0x18,0x18,0x18,0x19 };
+	uint8_t buf[25] = { 0, };
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(buf, sizeof(buf), m, sizeof(m)));
+	MEMCMP_EQUAL(expected, buf, sizeof(expected));
 }
 
 IGNORE_TEST(cbor, decode_ShouldReturnUnsignedInteger_WhenTagBignum) {

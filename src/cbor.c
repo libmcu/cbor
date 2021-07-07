@@ -5,25 +5,35 @@
 
 #define ADDITIONAL_INFO_MASK			0x1f /* the low-order 5 bits */
 
-#if !defined(MIN)
-#define MIN(a, b)				(((a) > (b))? (b) : (a))
-#endif
+#define get_major_type(data_item)		((data_item) >> 5)
 #define get_additional_info(major_type)		\
 	((major_type) & ADDITIONAL_INFO_MASK)
 
-typedef size_t (*major_type_callback_t)(void *buf, size_t bufsize,
-		const uint8_t *msg, size_t msgsize);
+#if !defined(MIN)
+#define MIN(a, b)				(((a) > (b))? (b) : (a))
+#endif
 
-static size_t do_unsigned_integer(void *buf, size_t bufsize,
-		const uint8_t *msg, size_t msgsize);
-static size_t do_negative_integer(void *buf, size_t bufsize,
-		const uint8_t *msg, size_t msgsize);
-static size_t do_byte_string(void *buf, size_t bufsize,
-		const uint8_t *msg, size_t msgsize);
-static size_t do_text_string(void *buf, size_t bufsize,
-		const uint8_t *msg, size_t msgsize);
-static size_t do_array(void *buf, size_t bufsize,
-		const uint8_t *msg, size_t msgsize);
+struct decode_context {
+	void *buf;
+	size_t bufsize;
+	size_t bufidx;
+
+	const uint8_t *msg;
+	size_t msgsize;
+	size_t msgidx;
+
+	uint8_t major_type;
+	uint8_t additional_info;
+	int following_bytes;
+};
+
+typedef cbor_error_t (*major_type_callback_t)(struct decode_context *ctx);
+
+static cbor_error_t do_unsigned_integer(struct decode_context *ctx);
+static cbor_error_t do_negative_integer(struct decode_context *ctx);
+static cbor_error_t do_byte_string(struct decode_context *ctx);
+static cbor_error_t do_text_string(struct decode_context *ctx);
+static cbor_error_t do_array(struct decode_context *ctx);
 
 /* 16 callbacks for 3-bit major type */
 static const major_type_callback_t callbacks[16] = {
@@ -37,35 +47,7 @@ static const major_type_callback_t callbacks[16] = {
 	//do_float_and_other,	/* 7 */
 };
 
-static cbor_error_t decode_cbor(void *buf, size_t bufsize,
-		const uint8_t *msg, size_t msgsize)
-{
-	uint8_t *out = (uint8_t *)buf;
-	size_t index = 0;
-	size_t outdex = 0;
-
-	while (index < msgsize && outdex < bufsize) {
-		uint8_t major_type = msg[index] >> 5;
-
-		if (callbacks[major_type] == NULL) {
-			return CBOR_ILLEGAL;
-		}
-
-		size_t l = callbacks[major_type](&out[outdex], bufsize - outdex,
-				&msg[index], msgsize - index);
-
-		if (l == 0) {
-			return CBOR_ILLEGAL;
-		}
-
-		index += l;
-		outdex += l;
-	}
-
-	return CBOR_SUCCESS;
-}
-
-static int get_following_bytes(uint8_t additional_info)
+static inline int get_following_bytes(uint8_t additional_info)
 {
 	if (additional_info < 24) {
 		return 0;
@@ -78,36 +60,77 @@ static int get_following_bytes(uint8_t additional_info)
 	return 1 << (additional_info - 24);
 }
 
-static size_t do_unsigned_integer(void *buf, size_t bufsize,
-		const uint8_t *msg, size_t msgsize)
+static cbor_error_t decode_cbor(struct decode_context *ctx, size_t maxitem)
 {
-	uint8_t *p = (uint8_t *)buf;
-	uint8_t additional_info = get_additional_info(msg[0]);
-	int bytes_to_read = get_following_bytes(additional_info);
+	size_t item = 0;
 
-	if (bytes_to_read < 0) {
-		return 0;
-	} else if (bytes_to_read == 0) {
-		*p = additional_info;
-		return 1;
+	while (ctx->msgidx < ctx->msgsize && ctx->bufidx < ctx->bufsize) {
+		ctx->major_type = get_major_type(ctx->msg[ctx->msgidx]);
+		ctx->additional_info = get_additional_info(ctx->msg[ctx->msgidx]);
+		ctx->following_bytes = get_following_bytes(ctx->additional_info);
+
+		if (ctx->following_bytes == RESERVED_VALUE) {
+			return CBOR_ILLEGAL;
+		} else if (callbacks[ctx->major_type] == NULL) {
+			return CBOR_ILLEGAL;
+		}
+
+		cbor_error_t err = callbacks[ctx->major_type](ctx);
+
+		if (err != CBOR_SUCCESS) {
+			return err;
+		}
+
+		item += 1;
+
+		if (item >= maxitem && maxitem > 0) {
+			break;
+		}
 	}
 
-	for (int i = 0; i < bytes_to_read; i++) {
-		p[bytes_to_read - i - 1] = msg[i + 1];
-	}
-
-	return (size_t)bytes_to_read + 1;
+	return CBOR_SUCCESS;
 }
 
-static size_t do_negative_integer(void *buf, size_t bufsize,
-		const uint8_t *msg, size_t msgsize)
+static cbor_error_t do_unsigned_integer(struct decode_context *ctx)
 {
-	size_t len = do_unsigned_integer(buf, bufsize, msg, msgsize);
-	size_t val_len = (len > 1)? len - 1 : len;
+	const uint8_t *msg = &ctx->msg[ctx->msgidx];
+	uint8_t *buf = &((uint8_t *)ctx->buf)[ctx->bufidx];
+
+	if (ctx->following_bytes == INDEFINITE_VALUE) {
+		return CBOR_ILLEGAL;
+	} else if (ctx->following_bytes == 0) {
+		*buf = ctx->additional_info;
+		ctx->bufidx++;
+	}
+
+	size_t n = MIN((size_t)ctx->following_bytes, ctx->bufsize - ctx->bufidx);
+
+	for (size_t i = 0; i < n; i++) {
+		buf[n - i - 1] = msg[i + 1];
+	}
+
+	ctx->bufidx += n;
+	ctx->msgidx += n + 1;
+
+	return CBOR_SUCCESS;
+}
+
+static cbor_error_t do_negative_integer(struct decode_context *ctx)
+{
+	size_t buf_start_index = ctx->bufidx;
+	uint8_t *buf = &((uint8_t *)ctx->buf)[buf_start_index];
+
+	cbor_error_t err = do_unsigned_integer(ctx);
+
+	if (err != CBOR_SUCCESS) {
+		return err;
+	}
+
 	uint64_t val = 0;
+	size_t val_len = ctx->bufidx - buf_start_index;
 
 	for (size_t i = 0; i < val_len; i++) {
-		val = (val << 8) | ((uint8_t *)buf)[val_len - i - 1];
+		val = (val << 8) | buf[val_len - i - 1];
 	}
 
 	if ((int64_t)val > 0) {
@@ -116,95 +139,97 @@ static size_t do_negative_integer(void *buf, size_t bufsize,
 	val--;
 
 	/* The value becomes a positive value if the data type size of the
-	 * variable is larger than the value size. So it sets MSB first here to
+	 * variable is larger than the value size. So we set MSB first here to
 	 * keep it negative. */
-	for (size_t i = 0; i < MIN(bufsize, 4u); i++) {
-		((uint8_t *)buf)[i] = 0xff;
+	for (size_t i = 0; i < MIN(ctx->bufsize - buf_start_index, 4u); i++) {
+		buf[i] = 0xff;
 	}
 	for (size_t i = 0; i < val_len; i++) {
-		((uint8_t *)buf)[i] = ((uint8_t *)&val)[i];
+		buf[i] = ((uint8_t *)&val)[i];
 	}
 
-	return len;
+	/* TODO: return CBOR_INVALID when bufsize is smaller than value size */
+	return CBOR_SUCCESS;
 }
 
-static size_t do_byte_string(void *buf, size_t bufsize,
-		const uint8_t *msg, size_t msgsize)
+static cbor_error_t do_byte_string(struct decode_context *ctx)
 {
-	uint8_t *p = (uint8_t *)buf;
-	uint8_t additional_info = get_additional_info(msg[0]);
-	int bytes_to_read = get_following_bytes(additional_info);
+	const uint8_t *msg = &ctx->msg[ctx->msgidx];
+	uint8_t *buf = &((uint8_t *)ctx->buf)[ctx->bufidx];
 	uint64_t len = 0;
 	int offset = 0;
 
-	if (bytes_to_read == RESERVED_VALUE) {
-		return 0;
-	} else if (bytes_to_read == INDEFINITE_VALUE) {
-		// TODO: implement the indefinite value
-	} else if (bytes_to_read == 0) {
-		len = (size_t)additional_info;
+	if (ctx->following_bytes == INDEFINITE_VALUE) {
+		/* TODO: implement the indefinite value */
+	} else if (ctx->following_bytes == 0) {
+		len = (size_t)ctx->additional_info;
 	} else {
-		while (offset < bytes_to_read) {
-			((uint8_t *)&len)[bytes_to_read - offset - 1]
+		while (offset < ctx->following_bytes) {
+			((uint8_t *)&len)[ctx->following_bytes - offset - 1]
 				= msg[offset + 1];
 			offset++;
 		}
 	}
 
+	len = MIN(len, ctx->bufsize - ctx->bufidx);
 	for (uint64_t i = 0; i < len; i++) {
-		*p++ = msg[(uint64_t)offset + i + 1];
+		buf[i] = msg[(uint64_t)offset + i + 1];
 	}
 
-	return (size_t)offset + len + 1;
+	ctx->bufidx += len;
+	ctx->msgidx += (size_t)offset + len + 1;
+
+	return CBOR_SUCCESS;
 }
 
-static size_t do_text_string(void *buf, size_t bufsize,
-		const uint8_t *msg, size_t msgsize)
+static cbor_error_t do_text_string(struct decode_context *ctx)
 {
-	return do_byte_string(buf, bufsize, msg, msgsize);
+	return do_byte_string(ctx);
 }
 
-static size_t do_array(void *buf, size_t bufsize,
-		const uint8_t *msg, size_t msgsize)
+static cbor_error_t do_array(struct decode_context *ctx)
 {
-	uint8_t additional_info = get_additional_info(msg[0]);
-	int bytes_to_read = get_following_bytes(additional_info);
+	const uint8_t *msg = &ctx->msg[ctx->msgidx];
 	uint64_t len = 0;
 	int offset = 0;
 
-	if (bytes_to_read == RESERVED_VALUE) {
-		return 0;
-	} else if (bytes_to_read == INDEFINITE_VALUE) {
-		// TODO: implement the indefinite value
-	} else if (bytes_to_read == 0) {
-		len = (size_t)additional_info;
+	if (ctx->following_bytes == INDEFINITE_VALUE) {
+		/* TODO: implement the indefinite value */
+	} else if (ctx->following_bytes == 0) {
+		len = (size_t)ctx->additional_info;
 	} else {
-		while (offset < bytes_to_read) {
-			((uint8_t *)&len)[bytes_to_read - offset - 1]
+		while (offset < ctx->following_bytes) {
+			((uint8_t *)&len)[ctx->following_bytes - offset - 1]
 				= msg[offset + 1];
 			offset++;
 		}
 	}
 
-	if (decode_cbor(buf, bufsize, &msg[offset+1], (size_t)len)
-			!= CBOR_SUCCESS) {
-		return 0;
+	ctx->msgidx += (size_t)offset + 1;
+	cbor_error_t err = decode_cbor(ctx, (size_t)len);
+
+	if (err != CBOR_SUCCESS) {
+		return err;
 	}
 
-	return (size_t)offset + len + 1;
+	return CBOR_SUCCESS;
 }
 
 cbor_error_t cbor_decode(void *buf, size_t bufsize,
 		const uint8_t *msg, size_t msgsize)
 {
-	return decode_cbor(buf, bufsize, msg, msgsize);
+	return decode_cbor(&(struct decode_context){
+			.buf = buf,
+			.bufsize = bufsize,
+			.bufidx = 0,
+			.msg = msg,
+			.msgsize = msgsize,
+			.msgidx = 0, }, 0);
 }
 
-#if 0
 size_t cbor_compute_decoded_size(const uint8_t *msg, size_t msgsize)
 {
 	(void)msg;
 	(void)msgsize;
 	return 0;
 }
-#endif
