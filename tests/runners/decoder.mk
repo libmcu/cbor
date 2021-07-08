@@ -1,10 +1,10 @@
-COMPONENT_NAME = cbor
+COMPONENT_NAME = decoder
 
 SRC_FILES = \
-	../src/cbor.c \
+	../src/decoder.c \
 
 TEST_SRC_FILES = \
-	src/cbor_test.cpp \
+	src/decoder_test.cpp \
 	src/test_all.cpp \
 
 INCLUDE_DIRS = \

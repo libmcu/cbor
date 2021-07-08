@@ -3,14 +3,14 @@
 #include "cbor/cbor.h"
 #include <string.h>
 
-TEST_GROUP(cbor) {
+TEST_GROUP(Decoder) {
 	void setup(void) {
 	}
 	void teardown(void) {
 	}
 };
 
-TEST(cbor, ShouldDecodeUnsignedInteger_WhenEncodedGiven) {
+TEST(Decoder, ShouldDecodeUnsignedInteger_WhenEncodedGiven) {
 	uint8_t m;
 	uint8_t v;
 	m = 0;
@@ -26,7 +26,7 @@ TEST(cbor, ShouldDecodeUnsignedInteger_WhenEncodedGiven) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), &m, sizeof(m)));
 	LONGS_EQUAL(23, v);
 }
-TEST(cbor, ShouldDecodeUnsignedInteger_WhenOneByteValueGiven) {
+TEST(Decoder, ShouldDecodeUnsignedInteger_WhenOneByteValueGiven) {
 	uint8_t m1[] = { 0x18, 0x18 }; // 24
 	uint8_t m2[] = { 0x18, 0x19 }; // 25
 	uint8_t m3[] = { 0x18, 0x64 }; // 100
@@ -41,32 +41,32 @@ TEST(cbor, ShouldDecodeUnsignedInteger_WhenOneByteValueGiven) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m4, sizeof(m4)));
 	LONGS_EQUAL(255, v);
 }
-TEST(cbor, ShouldDecodeUnsignedInteger_WhenTwoByteValueGiven) {
+TEST(Decoder, ShouldDecodeUnsignedInteger_WhenTwoByteValueGiven) {
 	uint8_t m[] = { 0x19, 0x03, 0xe8 }; // 1000
 	uint16_t v;
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
 	LONGS_EQUAL(1000, v);
 }
-TEST(cbor, ShouldDecodeUnsignedInteger_WhenFourByteValueGiven) {
+TEST(Decoder, ShouldDecodeUnsignedInteger_WhenFourByteValueGiven) {
 	uint8_t m[] = { 0x1a, 0x00, 0x0f, 0x42, 0x40 }; // 1000000
 	uint32_t v;
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
 	LONGS_EQUAL(1000000, v);
 }
-TEST(cbor, ShouldDecodeUnsignedInteger_WhenEightByteValueGiven) {
+TEST(Decoder, ShouldDecodeUnsignedInteger_WhenEightByteValueGiven) {
 	uint8_t m[] = { 0x1b,0x00,0x00,0x00,0xe8,0xd4,0xa5,0x10,0x00 };
 	uint64_t v;
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
 	LONGLONGS_EQUAL(1000000000000ull, v);
 }
-TEST(cbor, ShouldDecodeUnsignedInteger_WhenEightByteMaximumValueGiven) {
+TEST(Decoder, ShouldDecodeUnsignedInteger_WhenEightByteMaximumValueGiven) {
 	uint8_t m[] = { 0x1b,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff };
 	uint64_t v;
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
 	LONGLONGS_EQUAL(18446744073709551615ull, v);
 }
 
-TEST(cbor, ShouldDecodeNegativeInteger_WhenEncodedValueGiven) {
+TEST(Decoder, ShouldDecodeNegativeInteger_WhenEncodedValueGiven) {
 	uint8_t m;
 	int8_t v;
 	m = 0x20;
@@ -79,20 +79,20 @@ TEST(cbor, ShouldDecodeNegativeInteger_WhenEncodedValueGiven) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), &m, sizeof(m)));
 	LONGS_EQUAL(-24, v);
 }
-TEST(cbor, ShouldDecodeNegativeInteger_EvenWhenDataTypeSizeLargerThanValueSize) {
+TEST(Decoder, ShouldDecodeNegativeInteger_EvenWhenDataTypeSizeLargerThanValueSize) {
 	uint8_t m = 0x20;
 	int32_t v; /* it should work not only in int8_t but also int16, int32,
 		      and int64 */
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), &m, sizeof(m)));
 	LONGS_EQUAL(-1, v);
 }
-TEST(cbor, ShouldDecodeNegativeInteger_WhenOneByteValueGiven) {
+TEST(Decoder, ShouldDecodeNegativeInteger_WhenOneByteValueGiven) {
 	uint8_t m[] = { 0x38, 0x63 };
 	int8_t v;
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
 	LONGS_EQUAL(-100, v);
 }
-TEST(cbor, NegativeBecomesPositive_WhenDataTypeSizeIsSmallerThanValueSize) {
+TEST(Decoder, NegativeBecomesPositive_WhenDataTypeSizeIsSmallerThanValueSize) {
 	uint8_t m1[] = { 0x38, 0x80 };
 	uint8_t m2[] = { 0x38, 0xff };
 	int8_t v;
@@ -107,13 +107,13 @@ TEST(cbor, NegativeBecomesPositive_WhenDataTypeSizeIsSmallerThanValueSize) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v16, sizeof(v16), m2, sizeof(m2)));
 	LONGS_EQUAL(-256, v16);
 }
-TEST(cbor, ShouldDecodeNegativeInteger_WhenTwoByteValueGiven) {
+TEST(Decoder, ShouldDecodeNegativeInteger_WhenTwoByteValueGiven) {
 	uint8_t m[] = { 0x39, 0x03, 0xe7 };
 	int16_t v;
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
 	LONGS_EQUAL(-1000, v);
 }
-TEST(cbor, ShouldDecodeNegativeInteger_WhenEightByteValueGiven) {
+TEST(Decoder, ShouldDecodeNegativeInteger_WhenEightByteValueGiven) {
 	// -9223372036854775808 ~ 9223372036854775807
 	uint8_t m[] = { 0x3b,0x7f,0xff,0xff,0xff,0xff,0xff,0xff,0xff };
 	int64_t v;
@@ -121,14 +121,14 @@ TEST(cbor, ShouldDecodeNegativeInteger_WhenEightByteValueGiven) {
 	LONGLONGS_EQUAL(0x8000000000000000, v);
 }
 
-TEST(cbor, ShouldDecodeByteString) {
+TEST(Decoder, ShouldDecodeByteString) {
 	uint8_t expected[] = { 1, 2, 3, 4 };
 	uint8_t m[] = { 0x44,0x01,0x02,0x03,0x04 };
 	uint8_t buf[16];
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(buf, sizeof(buf), m, sizeof(m)));
 	MEMCMP_EQUAL(expected, buf, sizeof(expected));
 }
-TEST(cbor, ShouldDecodeByteString_WhenZeroLengthStringGiven) {
+TEST(Decoder, ShouldDecodeByteString_WhenZeroLengthStringGiven) {
 	uint8_t m;
 	uint8_t v;
 	m = 0x40;
@@ -136,21 +136,21 @@ TEST(cbor, ShouldDecodeByteString_WhenZeroLengthStringGiven) {
 	LONGS_EQUAL(0, v);
 }
 
-TEST(cbor, ShouldDecodeArray_WhenSingleLevelArrayGiven) {
+TEST(Decoder, ShouldDecodeArray_WhenSingleLevelArrayGiven) {
 	uint8_t expected[] = { 1, 2, 3 };
 	uint8_t m[] = { 0x83,0x01,0x02,0x03 };
 	uint8_t buf[3];
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(buf, sizeof(buf), m, sizeof(m)));
 	MEMCMP_EQUAL(expected, buf, sizeof(expected));
 }
-TEST(cbor, ShouldDecodeArray_WhenEmptyArrayGiven) {
+TEST(Decoder, ShouldDecodeArray_WhenEmptyArrayGiven) {
 	uint8_t expected[] = { 0 };
 	uint8_t m[] = { 0x80 };
 	uint8_t buf[3] = { 0, };
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(buf, sizeof(buf), m, sizeof(m)));
 	MEMCMP_EQUAL(expected, buf, sizeof(expected));
 }
-TEST(cbor, ShouldDecodeArray_WhenSingleLevelWithDiffentTypeValueGiven) {
+TEST(Decoder, ShouldDecodeArray_WhenSingleLevelWithDiffentTypeValueGiven) {
 	uint8_t m[] = { 0x83,0x01,0x63,0x61,0x62,0x63,0x03 };
 	struct {
 		uint8_t u8_1;
@@ -162,14 +162,14 @@ TEST(cbor, ShouldDecodeArray_WhenSingleLevelWithDiffentTypeValueGiven) {
 	LONGS_EQUAL(3, buf.u8_2);
 	MEMCMP_EQUAL("abc", buf.s, 3);
 }
-TEST(cbor, ShouldDecodeArray_WhenMultiLevelArrayGiven) {
+TEST(Decoder, ShouldDecodeArray_WhenMultiLevelArrayGiven) {
 	uint8_t expected[] = { 1, 2, 3, 4, 5 };
 	uint8_t m[] = { 0x83,0x01,0x82,0x02,0x03,0x82,0x04,0x05 };
 	uint8_t buf[5] = { 0, };
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(buf, sizeof(buf), m, sizeof(m)));
 	MEMCMP_EQUAL(expected, buf, sizeof(expected));
 }
-TEST(cbor, ShouldDecodeArray_WhenOneByteLengthGiven) {
+TEST(Decoder, ShouldDecodeArray_WhenOneByteLengthGiven) {
 	uint8_t expected[] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,
 		20,21,22,23,24,25 };
 	uint8_t m[] = { 0x98,0x19,0x01,0x02,0x03,0x04,0x05,0x06, 0x07,0x08,0x09,
@@ -180,7 +180,7 @@ TEST(cbor, ShouldDecodeArray_WhenOneByteLengthGiven) {
 	MEMCMP_EQUAL(expected, buf, sizeof(expected));
 }
 
-IGNORE_TEST(cbor, decode_ShouldReturnUnsignedInteger_WhenTagBignum) {
+IGNORE_TEST(Decoder, decode_ShouldReturnUnsignedInteger_WhenTagBignum) {
 #if 0
 	uint8_t m[] = { 0xc2,0x49,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
 	uint64_t v;
