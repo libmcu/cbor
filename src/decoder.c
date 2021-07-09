@@ -251,9 +251,31 @@ static cbor_error_t do_float_and_other(struct decode_context *ctx)
 		return CBOR_BREAK;
 	} else if (ctx->following_bytes == 1) {
 		ctx->following_bytes = 0;
+		ctx->additional_info = ctx->msg[++ctx->msgidx];
 	}
 
-	return do_unsigned_integer(ctx);
+	cbor_error_t err = do_unsigned_integer(ctx);
+
+	if (ctx->following_bytes == 0) {
+		uint8_t *simple_value = &ctx->buf[ctx->bufidx - 1];
+		switch (*simple_value) {
+		case 20: /* false */
+			*simple_value = 0;
+			break;
+		case 21: /* true */
+			*simple_value = 1;
+			break;
+		case 22: /* null */
+			*simple_value = '\0';
+			break;
+		case 23: /* undefined */
+			break;
+		default:
+			break;
+		}
+	}
+
+	return err;
 }
 
 cbor_error_t cbor_decode(void *buf, size_t bufsize,

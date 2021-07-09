@@ -394,3 +394,34 @@ TEST(Decoder, ShouldDecodeFloat_WhenSinglePrecisionNanGiven) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
 	CHECK(isnan(v) == true);
 }
+
+TEST(Decoder, ShouldDecodeFalse) {
+	uint8_t m[] = {	0xf4 };
+	uint8_t v;
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
+	LONGS_EQUAL(0, v);
+}
+TEST(Decoder, ShouldDecodeTrue) {
+	uint8_t m[] = {	0xf5 };
+	uint8_t v;
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
+	LONGS_EQUAL(1, v);
+}
+TEST(Decoder, ShouldDecodeNull) {
+	uint8_t m[] = {	0xf6 };
+	uint8_t v;
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
+	LONGS_EQUAL(0, v);
+}
+TEST(Decoder, ShouldDecodeSimpleValue) {
+	uint8_t m[] = {	0xf0 };
+	uint8_t v;
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
+	LONGS_EQUAL(16, v);
+}
+TEST(Decoder, ShouldDecodeSimpleValue_WhenFollowingByteGiven) {
+	uint8_t m[] = {	0xf8, 0xff };
+	uint8_t v;
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
+	LONGS_EQUAL(255, v);
+}
