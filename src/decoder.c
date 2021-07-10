@@ -42,8 +42,8 @@ static cbor_error_t do_recursive(struct decode_context *ctx);
 static cbor_error_t do_tag(struct decode_context *ctx);
 static cbor_error_t do_float_and_other(struct decode_context *ctx);
 
-/* 16 callbacks for 3-bit major type */
-static const major_type_callback_t callbacks[16] = {
+/* 8 callbacks for 3-bit major type */
+static const major_type_callback_t callbacks[] = {
 	do_unsigned_integer,	/* 0 */
 	do_negative_integer,	/* 1 */
 	do_string,		/* 2: byte string */
@@ -53,6 +53,7 @@ static const major_type_callback_t callbacks[16] = {
 	do_tag,			/* 6 */
 	do_float_and_other,	/* 7 */
 };
+_Static_assert(sizeof(callbacks) == 8 * sizeof(major_type_callback_t), "");
 
 static void copy_data_le(uint8_t *dst, const uint8_t *src, size_t len)
 {
@@ -103,8 +104,7 @@ static cbor_error_t decode_cbor(struct decode_context *ctx, size_t maxitem)
 		ctx->additional_info = get_additional_info(ctx->msg[ctx->msgidx]);
 		ctx->following_bytes = get_following_bytes(ctx->additional_info);
 
-		if (ctx->following_bytes == RESERVED_VALUE
-				|| callbacks[ctx->major_type] == NULL) {
+		if (ctx->following_bytes == RESERVED_VALUE) {
 			err = CBOR_ILLEGAL;
 			break;
 		}
