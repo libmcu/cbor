@@ -1,4 +1,5 @@
 #include "cbor/cbor.h"
+#include <stdbool.h>
 
 #define INDEFINITE_VALUE			((uint8_t)-1)
 #define RESERVED_VALUE				((uint8_t)-2)
@@ -90,6 +91,28 @@ static uint8_t get_following_bytes(uint8_t additional_info)
 	return (uint8_t)(1u << (additional_info - 24));
 }
 
+static bool has_valid_buffers_for_following_bytes(
+		const struct decode_context *ctx, cbor_error_t *err)
+{
+	if (ctx->following_bytes == RESERVED_VALUE) {
+		*err = CBOR_ILLEGAL;
+		return false;
+	} else if (ctx->following_bytes == INDEFINITE_VALUE) {
+		return true;
+	}
+
+	if ((ctx->following_bytes + 1u) > ctx->msgsize - ctx->msgidx) {
+		*err = CBOR_ILLEGAL;
+		return false;
+	}
+	if (ctx->following_bytes > ctx->bufsize - ctx->bufidx) {
+		*err = CBOR_UNDERRUN;
+		return false;
+	}
+
+	return true;
+}
+
 static cbor_error_t decode_cbor(struct decode_context *ctx, size_t maxitem)
 {
 	cbor_error_t err = CBOR_SUCCESS;
@@ -104,8 +127,7 @@ static cbor_error_t decode_cbor(struct decode_context *ctx, size_t maxitem)
 		ctx->additional_info = get_additional_info(ctx->msg[ctx->msgidx]);
 		ctx->following_bytes = get_following_bytes(ctx->additional_info);
 
-		if (ctx->following_bytes == RESERVED_VALUE) {
-			err = CBOR_ILLEGAL;
+		if (!has_valid_buffers_for_following_bytes(ctx, &err)) {
 			break;
 		}
 
@@ -129,6 +151,9 @@ static cbor_error_t decode_cbor(struct decode_context *ctx, size_t maxitem)
 
 	ctx->recursion_depth--;
 
+	assert(ctx->msgidx <= ctx->msgsize);
+	assert(ctx->bufidx <= ctx->bufsize);
+
 	return err;
 }
 
@@ -144,12 +169,10 @@ static cbor_error_t do_unsigned_integer(struct decode_context *ctx)
 		ctx->bufidx++;
 	}
 
-	size_t n = MIN(ctx->following_bytes, ctx->bufsize - ctx->bufidx);
+	copy_data(buf, &msg[1], ctx->following_bytes);
 
-	copy_data(buf, &msg[1], n);
-
-	ctx->bufidx += n;
-	ctx->msgidx += n + 1;
+	ctx->bufidx += ctx->following_bytes;
+	ctx->msgidx += ctx->following_bytes + 1;
 
 	return CBOR_SUCCESS;
 }
@@ -220,7 +243,12 @@ static cbor_error_t do_string(struct decode_context *ctx)
 	const uint8_t *msg = &ctx->msg[ctx->msgidx];
 	uint8_t *buf = &ctx->buf[ctx->bufidx];
 
-	len = MIN(len, ctx->bufsize - ctx->bufidx);
+	size_t maxlen =
+		MIN(ctx->bufsize - ctx->bufidx, ctx->msgsize - ctx->msgidx);
+
+	if (len > maxlen) {
+		return CBOR_ILLEGAL;
+	}
 
 	for (size_t i = 0; i < len; i++) {
 		buf[i] = msg[i];
@@ -244,8 +272,25 @@ static cbor_error_t do_tag(struct decode_context *ctx)
 	return CBOR_INVALID;
 }
 
+static uint8_t get_simple_value(uint8_t val)
+{
+	switch (val) {
+	case 20: /* false */
+		return 0;
+	case 21: /* true */
+		return 1;
+	case 22: /* null */
+		return '\0';
+	case 23: /* undefined */
+	default:
+		return val;
+	}
+}
+
 static cbor_error_t do_float_and_other(struct decode_context *ctx)
 {
+	cbor_error_t err;
+
 	if (ctx->following_bytes == INDEFINITE_VALUE) {
 		ctx->msgidx++;
 		return CBOR_BREAK;
@@ -254,25 +299,15 @@ static cbor_error_t do_float_and_other(struct decode_context *ctx)
 		ctx->additional_info = ctx->msg[++ctx->msgidx];
 	}
 
-	cbor_error_t err = do_unsigned_integer(ctx);
+	if (!has_valid_buffers_for_following_bytes(ctx, &err)) {
+		return err;
+	}
+
+	err = do_unsigned_integer(ctx);
 
 	if (ctx->following_bytes == 0) {
-		uint8_t *simple_value = &ctx->buf[ctx->bufidx - 1];
-		switch (*simple_value) {
-		case 20: /* false */
-			*simple_value = 0;
-			break;
-		case 21: /* true */
-			*simple_value = 1;
-			break;
-		case 22: /* null */
-			*simple_value = '\0';
-			break;
-		case 23: /* undefined */
-			break;
-		default:
-			break;
-		}
+		ctx->buf[ctx->bufidx - 1] =
+			get_simple_value(ctx->buf[ctx->bufidx - 1]);
 	}
 
 	return err;
@@ -301,11 +336,4 @@ cbor_error_t cbor_decode(void *buf, size_t bufsize,
 	}
 
 	return err;
-}
-
-size_t cbor_compute_decoded_size(const uint8_t *msg, size_t msgsize)
-{
-	(void)msg;
-	(void)msgsize;
-	return 0;
 }

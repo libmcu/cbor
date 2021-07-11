@@ -425,3 +425,53 @@ TEST(Decoder, ShouldDecodeSimpleValue_WhenFollowingByteGiven) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&v, sizeof(v), m, sizeof(m)));
 	LONGS_EQUAL(255, v);
 }
+
+TEST(Decoder, ShouldReturnIllegal_WhenIncompleteUnsignedIntegerGiven) {
+	uint8_t buf[2];
+	for (uint8_t i = 0x18; i < 0x20; i++) {
+		LONGS_EQUAL(CBOR_ILLEGAL,
+				cbor_decode(buf, sizeof(buf), &i, sizeof(i)));
+	}
+}
+TEST(Decoder, ShouldReturnIllegal_WhenIncompleteNegativeIntegerGiven) {
+	uint8_t buf[2];
+	for (uint8_t i = 0x38; i < 0x40; i++) {
+		LONGS_EQUAL(CBOR_ILLEGAL,
+				cbor_decode(buf, sizeof(buf), &i, sizeof(i)));
+	}
+}
+TEST(Decoder, ShouldReturnIllegal_WhenIncompleteStringGiven) {
+	uint8_t buf[2];
+	for (uint8_t i = 0x41; i < 0x5f; i++) {
+		LONGS_EQUAL(CBOR_ILLEGAL,
+				cbor_decode(buf, sizeof(buf), &i, sizeof(i)));
+	}
+}
+TEST(Decoder, ShouldReturnIllegal_WhenIncompleteArrayGiven) {
+	uint8_t buf[2];
+	for (uint8_t i = 0x81; i < 0x98; i++) {
+		LONGS_EQUAL(CBOR_UNDERRUN,
+				cbor_decode(buf, sizeof(buf), &i, sizeof(i)));
+	}
+}
+TEST(Decoder, ShouldReturnIllegal_WhenIncompleteArrayGiven2) {
+	uint8_t buf[2];
+	for (uint8_t i = 0x98; i < 0x9f; i++) {
+		LONGS_EQUAL(CBOR_ILLEGAL,
+				cbor_decode(buf, sizeof(buf), &i, sizeof(i)));
+	}
+}
+TEST(Decoder, ShouldReturnIllegal_WhenIncompleteMapGiven) {
+	uint8_t buf[2];
+	for (uint8_t i = 0xa1; i < 0xb8; i++) {
+		LONGS_EQUAL(CBOR_UNDERRUN,
+				cbor_decode(buf, sizeof(buf), &i, sizeof(i)));
+	}
+}
+TEST(Decoder, ShouldReturnIllegal_WhenIncompleteMapGiven2) {
+	uint8_t buf[2];
+	for (uint8_t i = 0xb8; i < 0xbf; i++) {
+		LONGS_EQUAL(CBOR_ILLEGAL,
+				cbor_decode(buf, sizeof(buf), &i, sizeof(i)));
+	}
+}
