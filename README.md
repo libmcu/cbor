@@ -1,4 +1,11 @@
 # CBOR
+
+This is a simple, small decoder for CBOR, the Concise Binary Object
+Representation.  CBOR is defined by
+[IETF RFC 8949](https://datatracker.ietf.org/doc/html/rfc8949), and
+Wikipedia has [a good description](https://en.wikipedia.org/wiki/CBOR).
+
+
 Simplicity and code size are considered first.
 
 The decoder takes 702 bytes for ARM Cortex-M0, using arm-none-eabi-gcc
