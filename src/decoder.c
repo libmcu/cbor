@@ -8,7 +8,7 @@
 typedef cbor_error_t (*item_callback_t)(const cbor_item_t *item,
 		const uint8_t *msg, uint8_t *buf, size_t bufsize);
 
-static cbor_error_t decode_none(const cbor_item_t *item, const uint8_t *msg,
+static cbor_error_t decode_pass(const cbor_item_t *item, const uint8_t *msg,
 		uint8_t *buf, size_t bufsize);
 static cbor_error_t decode_integer(const cbor_item_t *item, const uint8_t *msg,
 		uint8_t *buf, size_t bufsize);
@@ -18,11 +18,11 @@ static cbor_error_t decode_float(const cbor_item_t *item, const uint8_t *msg,
 		uint8_t *buf, size_t bufsize);
 
 static const item_callback_t callbacks[] = {
-	decode_none,		/* 0: CBOR_ITEM_UNKNOWN */
+	decode_pass,		/* 0: CBOR_ITEM_UNKNOWN */
 	decode_integer,		/* 1: CBOR_ITEM_INTEGER */
 	decode_string,		/* 2: CBOR_ITEM_STRING */
-	decode_none,		/* 3: CBOR_ITEM_ARRAY */
-	decode_none,		/* 4: CBOR_ITEM_MAP */
+	decode_pass,		/* 3: CBOR_ITEM_ARRAY */
+	decode_pass,		/* 4: CBOR_ITEM_MAP */
 	decode_float,		/* 5: CBOR_ITEM_FLOAT_AND_SIMPLE_VALUE */
 };
 
@@ -133,7 +133,7 @@ static cbor_error_t decode_float(const cbor_item_t *item, const uint8_t *msg,
 	return err;
 }
 
-static cbor_error_t decode_none(const cbor_item_t *item, const uint8_t *msg,
+static cbor_error_t decode_pass(const cbor_item_t *item, const uint8_t *msg,
 		uint8_t *buf, size_t bufsize)
 {
 	(void)item;
