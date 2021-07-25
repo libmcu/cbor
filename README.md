@@ -40,16 +40,16 @@ Please see the [examples](examples).
 ### Parser
 
 ```c
-cbor_parser_t parser;
+cbor_reader_t reader;
 cbor_item_t items[MAX_ITEMS];
 size_t n;
 
-cbor_parser_init(&parser, cbor_encoded_message, sizeof(cbor_encoded_message));
-cbor_parse(&parser, items, sizeof(items) / sizeof(items[0]), &n);
+cbor_reader_init(&reader, cbor_encoded_message, sizeof(cbor_encoded_message));
+cbor_parse(&reader, items, sizeof(items) / sizeof(items[0]), &n);
 
 for (i = 0; i < n; i++) {
-	printf("type: %s, size: %zu\n",
-			cbor_stringify_data_type(items[i].type), items[i].size);
+	printf("item: %s, size: %zu\n",
+			cbor_stringify_item(&items[i]), items[i].size);
 }
 ```
 
@@ -64,7 +64,7 @@ union {
 	uint8_t s[64];
 } val;
 
-cbor_decode(&items[i], cbor_encoded_message, &val, sizeof(val));
+cbor_decode(&reader, &items[i], &val, sizeof(val));
 ```
 
 ### Encoder

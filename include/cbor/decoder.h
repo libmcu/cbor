@@ -10,14 +10,14 @@ extern "C" {
 /**
  * Decode a CBOR data item
  *
+ * @param[in] reader reader context for the actual encoded message
  * @param[in] item meta data about the item to be decoded
- * @param[in] msg the actual encoded message
  * @param[out] buf the buffer where decoded value to be written in
  * @param[in] bufsize the buffer size
  *
  * @return a code of @ref cbor_error_t
  */
-cbor_error_t cbor_decode(const cbor_item_t *item, const void *msg,
+cbor_error_t cbor_decode(cbor_reader_t *reader, const cbor_item_t *item,
 		void *buf, size_t bufsize);
 
 #if defined(__cplusplus)

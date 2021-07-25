@@ -143,7 +143,7 @@ static cbor_error_t decode_pass(const cbor_item_t *item, const uint8_t *msg,
 	return CBOR_SUCCESS;
 }
 
-cbor_error_t cbor_decode(const cbor_item_t *item, const void *msg,
+cbor_error_t cbor_decode(cbor_reader_t *reader, const cbor_item_t *item,
 		void *buf, size_t bufsize)
 {
 	if (is_break(item)) {
@@ -153,6 +153,5 @@ cbor_error_t cbor_decode(const cbor_item_t *item, const void *msg,
 		return CBOR_OVERRUN;
 	}
 
-	return callbacks[item->type](item,
-			(const uint8_t *)msg, (uint8_t *)buf, bufsize);
+	return callbacks[item->type](item, reader->msg, (uint8_t *)buf, bufsize);
 }

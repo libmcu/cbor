@@ -38,7 +38,7 @@ static check_func_t check_item_type[] = {
 };
 
 TEST_GROUP(Parser) {
-	cbor_parser_t parser;
+	cbor_reader_t reader;
 	cbor_item_t item;
 	cbor_item_t items[256];
 
@@ -56,15 +56,14 @@ TEST(Parser, ShouldDecodeUnsignedInteger_WhenEncodedGiven) {
 	uint8_t m[] = { 0, 1, 10, 23};
 	size_t n;
 	for (int i = 0; i < (int)(sizeof(m)/sizeof(m[0])); i++) {
-		LONGS_EQUAL(CBOR_SUCCESS,
-				cbor_parser_init(&parser, &m[i], sizeof(m[i])));
-		LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, &n));
+		cbor_reader_init(&reader, &m[i], sizeof(m[i]));
+		LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, &n));
 		LONGS_EQUAL(1, n);
 		LONGS_EQUAL(1, item.size);
 		LONGS_EQUAL(0, item.offset);
 		uint8_t v;
 		LONGS_EQUAL(CBOR_SUCCESS,
-				cbor_decode(&item, &m[i], &v, sizeof(v)));
+				cbor_decode(&reader, &item, &v, sizeof(v)));
 		LONGS_EQUAL(m[i], v);
 	}
 }
@@ -75,53 +74,53 @@ TEST(Parser, ShouldDecodeUnsignedInteger_WhenOneByteValueGiven) {
 	uint8_t m4[] = { 0x18, 0xff }; // 255
 	uint8_t v;
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m1, sizeof(m1)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, NULL));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m1, &v, sizeof(v)));
+	cbor_reader_init(&reader, m1, sizeof(m1));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, NULL));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(24, v);
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m2, sizeof(m2)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, NULL));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m2, &v, sizeof(v)));
+	cbor_reader_init(&reader, m2, sizeof(m2));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, NULL));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(25, v);
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m3, sizeof(m3)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, NULL));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m3, &v, sizeof(v)));
+	cbor_reader_init(&reader, m3, sizeof(m3));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, NULL));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(100, v);
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m4, sizeof(m4)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, NULL));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m4, &v, sizeof(v)));
+	cbor_reader_init(&reader, m4, sizeof(m4));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, NULL));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(255, v);
 }
 TEST(Parser, ShouldDecodeUnsignedInteger_WhenTwoByteValueGiven) {
 	uint8_t m[] = { 0x19, 0x03, 0xe8 }; // 1000
 	uint16_t v;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m, &v, sizeof(v)));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(1000, v);
 }
 TEST(Parser, ShouldDecodeUnsignedInteger_WhenFourByteValueGiven) {
 	uint8_t m[] = { 0x1a, 0x00, 0x0f, 0x42, 0x40 }; // 1000000
 	uint32_t v;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m, &v, sizeof(v)));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(1000000, v);
 }
 TEST(Parser, ShouldDecodeUnsignedInteger_WhenEightByteValueGiven) {
 	uint8_t m[] = { 0x1b,0x00,0x00,0x00,0xe8,0xd4,0xa5,0x10,0x00 };
 	uint64_t v;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m, &v, sizeof(v)));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGLONGS_EQUAL(1000000000000ull, v);
 }
 TEST(Parser, ShouldDecodeUnsignedInteger_WhenEightByteMaximumValueGiven) {
 	uint8_t m[] = { 0x1b,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff };
 	uint64_t v;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m, &v, sizeof(v)));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGLONGS_EQUAL(18446744073709551615ull, v);
 }
 
@@ -129,19 +128,19 @@ TEST(Parser, ShouldDecodeNegativeInteger_WhenEncodedValueGiven) {
 	uint8_t m;
 	int8_t v;
 	m = 0x20;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, &m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, &m, &v, sizeof(v)));
+	cbor_reader_init(&reader, &m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(-1, v);
 	m = 0x29;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, &m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, &m, &v, sizeof(v)));
+	cbor_reader_init(&reader, &m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(-10, v);
 	m = 0x37;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, &m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, &m, &v, sizeof(v)));
+	cbor_reader_init(&reader, &m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(-24, v);
 }
 TEST(Parser, ShouldDecodeNegativeInteger_EvenWhenDataTypeSizeLargerThanValueSize) {
@@ -151,23 +150,23 @@ TEST(Parser, ShouldDecodeNegativeInteger_EvenWhenDataTypeSizeLargerThanValueSize
 	int32_t v32;
 	int64_t v64;
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, &m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, &m, &v8, sizeof(v8)));
+	cbor_reader_init(&reader, &m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v8, sizeof(v8)));
 	LONGS_EQUAL(-1, v8);
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, &m, &v16, sizeof(v16)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v16, sizeof(v16)));
 	LONGS_EQUAL(-1, v16);
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, &m, &v32, sizeof(v32)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v32, sizeof(v32)));
 	LONGS_EQUAL(-1, v32);
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, &m, &v64, sizeof(v64)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v64, sizeof(v64)));
 	LONGS_EQUAL(-1, v64);
 }
 TEST(Parser, ShouldDecodeNegativeInteger_WhenOneByteValueGiven) {
 	uint8_t m[] = { 0x38, 0x63 };
 	int8_t v;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m, &v, sizeof(v)));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(-100, v);
 }
 TEST(Parser, NegativeBecomesPositive_WhenDataTypeSizeIsSmallerThanValueSize) {
@@ -175,35 +174,35 @@ TEST(Parser, NegativeBecomesPositive_WhenDataTypeSizeIsSmallerThanValueSize) {
 	uint8_t m2[] = { 0x38, 0xff };
 	int8_t v;
 	int16_t v16;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m1, sizeof(m1)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m1, &v, sizeof(v)));
+	cbor_reader_init(&reader, m1, sizeof(m1));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(0x7f, v);
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m1, &v16, sizeof(v16)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v16, sizeof(v16)));
 	LONGS_EQUAL(-129, v16);
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m2, sizeof(m2)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m2, &v, sizeof(v)));
+	cbor_reader_init(&reader, m2, sizeof(m2));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(0, v);
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m2, &v16, sizeof(v16)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v16, sizeof(v16)));
 	LONGS_EQUAL(-256, v16);
 }
 TEST(Parser, ShouldDecodeNegativeInteger_WhenTwoByteValueGiven) {
 	uint8_t m[] = { 0x39, 0x03, 0xe7 };
 	int16_t v;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m, &v, sizeof(v)));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(-1000, v);
 }
 TEST(Parser, ShouldDecodeNegativeInteger_WhenEightByteValueGiven) {
 	// -9223372036854775808 ~ 9223372036854775807
 	uint8_t m[] = { 0x3b,0x7f,0xff,0xff,0xff,0xff,0xff,0xff,0xff };
 	int64_t v;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m, &v, sizeof(v)));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGLONGS_EQUAL(0x8000000000000000, v);
 }
 
@@ -211,26 +210,26 @@ TEST(Parser, ShouldDecodeByteString) {
 	uint8_t expected[] = { 1, 2, 3, 4 };
 	uint8_t m[] = { 0x44,0x01,0x02,0x03,0x04 };
 	uint8_t buf[sizeof(expected)];
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, m, buf, sizeof(buf)));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, buf, sizeof(buf)));
 	MEMCMP_EQUAL(expected, buf, sizeof(expected));
 }
 TEST(Parser, ShouldDecodeByteString_WhenZeroLengthStringGiven) {
 	uint8_t m;
 	uint8_t v;
 	m = 0x40;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, &m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, &item, 1, 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&item, &m, &v, sizeof(v)));
+	cbor_reader_init(&reader, &m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &item, &v, sizeof(v)));
 	LONGS_EQUAL(0, v);
 }
 TEST(Parser, ShouldDecodeTextString_WhenWrappedInArray) {
 	uint8_t m[] = { 0x84,0x61,0x61,0x61,0x62,0x01,0x64,0xf0,0x9f,0x98,0x80 };
 	uint8_t buf[sizeof(m)];
 	size_t n;
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parser_init(&parser, m, sizeof(m)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(5, n);
 
 	LONGS_EQUAL(4, items[0].size); // array
@@ -239,14 +238,14 @@ TEST(Parser, ShouldDecodeTextString_WhenWrappedInArray) {
 	LONGS_EQUAL(1, items[3].size); // unsigned
 	LONGS_EQUAL(4, items[4].size); // text
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&items[0], m, buf, sizeof(buf)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&items[1], m, buf, sizeof(buf)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &items[0], buf, sizeof(buf)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &items[1], buf, sizeof(buf)));
 	MEMCMP_EQUAL("a", buf, 1);
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&items[2], m, buf, sizeof(buf)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &items[2], buf, sizeof(buf)));
 	MEMCMP_EQUAL("b", buf, 1);
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&items[3], m, buf, sizeof(buf)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &items[3], buf, sizeof(buf)));
 	LONGS_EQUAL(1, buf[0]);
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&items[4], m, buf, sizeof(buf)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &items[4], buf, sizeof(buf)));
 	uint8_t expected[] = { 0xF0,0x9F,0x98,0x80 };
 	MEMCMP_EQUAL(expected, buf, sizeof(expected));
 }
@@ -256,13 +255,13 @@ TEST(Parser, ShouldDecodeArray_WhenSingleLevelArrayGiven) {
 	uint8_t v;
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(4, n);
 	LONGS_EQUAL(CBOR_ITEM_ARRAY, items[0].type);
 	for (size_t i = 1; i < n; i++) {
 		LONGS_EQUAL(CBOR_SUCCESS,
-				cbor_decode(&items[i], m, &v, sizeof(v)));
+				cbor_decode(&reader, &items[i], &v, sizeof(v)));
 		LONGS_EQUAL(i, v);
 	}
 }
@@ -270,17 +269,17 @@ TEST(Parser, ShouldDecodeArray_WhenEmptyArrayGiven) {
 	uint8_t expected[] = { 0 };
 	uint8_t m[] = { 0x80 };
 	uint8_t buf[1] = { 0, };
-	cbor_parser_init(&parser, m, sizeof(m));
-	cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), 0);
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(items, m, buf, sizeof(buf)));
+	cbor_reader_init(&reader, m, sizeof(m));
+	cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), 0);
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, items, buf, sizeof(buf)));
 	MEMCMP_EQUAL(expected, buf, sizeof(expected));
 }
 TEST(Parser, ShouldDecodeArray_WhenSingleLevelWithDiffentTypeValueGiven) {
 	uint8_t m[] = { 0x83,0x01,0x63,0x61,0x62,0x63,0x03 };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(4, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 3);
@@ -295,8 +294,8 @@ TEST(Parser, ShouldDecodeArray_WhenMultiLevelArrayGiven) {
 	uint8_t m[] = { 0x83,0x01,0x82,0x02,0x03,0x82,0x04,0x05 };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(8, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 3);
@@ -317,8 +316,8 @@ TEST(Parser, ShouldDecodeArray_WhenOneByteLengthGiven) {
 		0x16,0x17,0x18,0x18,0x18,0x19 };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(26, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 25);
@@ -333,8 +332,8 @@ TEST(Parser, ShouldDecodeMap_WhenSingleLevelArrayGiven) {
 	uint8_t m[] = { 0xa2,0x01,0x02,0x03,0x04 };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(5, n);
 
 	mock().expectOneCall("f_map").withParameter("size", 2);
@@ -348,9 +347,9 @@ TEST(Parser, ShouldDecodeMap_WhenEmptyMapGiven) {
 	uint8_t m[] = { 0xa0 };
 	uint8_t buf[1] = { 0, };
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), 0));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(items, m, buf, sizeof(buf)));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), 0));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, items, buf, sizeof(buf)));
 }
 TEST(Parser, ShouldDecodeMap_WhenEncodedLenGiven) {
 	// {"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
@@ -358,8 +357,8 @@ TEST(Parser, ShouldDecodeMap_WhenEncodedLenGiven) {
 		0x61,0x43,0x61,0x64,0x61,0x44,0x61,0x65,0x61,0x45 };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(11, n);
 
 	mock().expectOneCall("f_map").withParameter("size", 5);
@@ -374,8 +373,8 @@ TEST(Parser, ShouldDecodeMap_WhenArrayValueGiven) {
 	uint8_t m[] = { 0xa2,0x61,0x61,0x01,0x61,0x62,0x82,0x02,0x03 };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(7, n);
 
 	mock().expectOneCall("f_map").withParameter("size", 2);
@@ -395,9 +394,9 @@ TEST(Parser, ShouldReturnBreak_WhenBreakGiven) {
 	uint8_t m[] = { 0xff };
 	uint8_t buf[sizeof(expected)] = { 0, };
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), 0));
-	LONGS_EQUAL(CBOR_BREAK, cbor_decode(items, m, buf, sizeof(buf)));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), 0));
+	LONGS_EQUAL(CBOR_BREAK, cbor_decode(&reader, items, buf, sizeof(buf)));
 	MEMCMP_EQUAL(expected, buf, sizeof(expected));
 }
 TEST(Parser, ShouldDecodeByteString_WhenIndefiniteByteGiven) {
@@ -406,8 +405,8 @@ TEST(Parser, ShouldDecodeByteString_WhenIndefiniteByteGiven) {
 		0x90,0x98,0x44,0x63,0x62,0x6f,0x72,0xff };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(4, n);
 
 	mock().expectOneCall("f_string").withParameter("size", (size_t)-1);
@@ -425,8 +424,8 @@ TEST(Parser, ShouldDecodeTextString_WhenIndefiniteTextStringGiven) {
 		0x90,0x98,0x64,0x63,0x62,0x6f,0x72,0xff };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(4, n);
 
 	mock().expectOneCall("f_string").withParameter("size", (size_t)-1);
@@ -444,8 +443,8 @@ TEST(Parser, ShouldDecodeByteString_WhenIndefiniteByteGiven2) {
 	uint8_t m[] = { 0x5f,0x42,0x01,0x02,0x43,0x03,0x04,0x05,0xff };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(4, n);
 
 	mock().expectOneCall("f_string").withParameter("size", (size_t)-1);
@@ -462,8 +461,8 @@ TEST(Parser, ShouldDecodeTextString_WhenIndefiniteStringGiven) {
 	uint8_t m[] = {	0x7f,0x65,0x73,0x74,0x72,0x65,0x61,0x64,0x6d,0x69,0x6e,0x67,0xff };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(4, n);
 
 	mock().expectOneCall("f_string").withParameter("size", (size_t)-1);
@@ -479,8 +478,8 @@ TEST(Parser, ShouldDecodeEmptyLengthArray_WhenZeroLengthIndefiniteArrarGiven) {
 	uint8_t m[] = { 0x9f, 0xff };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(2, n);
 
 	mock().expectOneCall("f_array").withParameter("size", (size_t)-1);
@@ -495,8 +494,8 @@ TEST(Parser, ShouldDecodeArray_WhenMultiLevelIndefiniteArrarGiven) {
 	uint8_t m[] = { 0x9f,0x01,0x82,0x02,0x03,0x9f,0x04,0x05,0xff,0xff };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(10, n);
 
 	mock().expectOneCall("f_array").withParameter("size", (size_t)-1);
@@ -517,8 +516,8 @@ TEST(Parser, ShouldDecodeArray_WhenMultiLevelIndefiniteArrarGiven2) {
 	uint8_t m[] = { 0x9f,0x01,0x82,0x02,0x03,0x82,0x04,0x05,0xff };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(9, n);
 
 	mock().expectOneCall("f_array").withParameter("size", (size_t)-1);
@@ -538,8 +537,8 @@ TEST(Parser, ShouldDecodeArray_WhenMultiLevelIndefiniteArrarGiven3) {
 	uint8_t m[] = { 0x83,0x01,0x82,0x02,0x03,0x9f,0x04,0x05,0xff };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(9, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 3);
@@ -559,8 +558,8 @@ TEST(Parser, ShouldDecodeArray_WhenMultiLevelIndefiniteArrarGiven4) {
 	uint8_t m[] = { 0x83,0x01,0x9f,0x02,0x03,0xff,0x82,0x04,0x05 };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(9, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 3);
@@ -582,8 +581,8 @@ TEST(Parser, ShouldDecodeArray_WhenInfiniteLengthGiven) {
 		0x17,0x18,0x18,0x18,0x19,0xff };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(27, n);
 
 	mock().expectOneCall("f_array").withParameter("size", (size_t)-1);
@@ -599,8 +598,8 @@ TEST(Parser, ShouldDecodeMap_WhenMultiInfiniteLengthGiven) {
 	uint8_t m[] = { 0xbf,0x61,0x61,0x01,0x61,0x62,0x9f,0x02,0x03,0xff,0xff };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(9, n);
 
 	mock().expectOneCall("f_map").withParameter("size", (size_t)-1);
@@ -621,8 +620,8 @@ TEST(Parser, ShouldDecodeArray_WhenInfiniteMapIncluded) {
 	uint8_t m[] = { 0x82,0x61,0x61,0xbf,0x61,0x62,0x61,0x63,0xff };
 	size_t n;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(6, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 2);
@@ -642,8 +641,8 @@ TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionGiven) {
 	size_t n;
 	float v;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
 	mock().expectOneCall("f_float").withParameter("size", 4);
@@ -652,7 +651,7 @@ TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionGiven) {
 		check_item_type[items[i].type](items[i].size);
 	}
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(items, m, &v, sizeof(v)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, items, &v, sizeof(v)));
 	DOUBLES_EQUAL(100000.0, (double)v, 0.1);
 }
 TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionGiven2) {
@@ -660,8 +659,8 @@ TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionGiven2) {
 	size_t n;
 	float v;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
 	mock().expectOneCall("f_float").withParameter("size", 4);
@@ -670,7 +669,7 @@ TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionGiven2) {
 		check_item_type[items[i].type](items[i].size);
 	}
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(items, m, &v, sizeof(v)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, items, &v, sizeof(v)));
 	DOUBLES_EQUAL(3.4028234663852886e+38, (double)v, 0.1);
 }
 TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionInfinityGiven) {
@@ -678,8 +677,8 @@ TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionInfinityGiven) {
 	size_t n;
 	float v;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
 	mock().expectOneCall("f_float").withParameter("size", 4);
@@ -688,7 +687,7 @@ TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionInfinityGiven) {
 		check_item_type[items[i].type](items[i].size);
 	}
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(items, m, &v, sizeof(v)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, items, &v, sizeof(v)));
 	DOUBLES_EQUAL((double)INFINITY, (double)v, 0.1);
 }
 TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionNegativeInfinityGiven) {
@@ -696,8 +695,8 @@ TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionNegativeInfinityGiven) {
 	size_t n;
 	float v;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
 	mock().expectOneCall("f_float").withParameter("size", 4);
@@ -706,7 +705,7 @@ TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionNegativeInfinityGiven) {
 		check_item_type[items[i].type](items[i].size);
 	}
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(items, m, &v, sizeof(v)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, items, &v, sizeof(v)));
 	DOUBLES_EQUAL((double)-INFINITY, (double)v, 0.1);
 }
 TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionNanGiven) {
@@ -714,8 +713,8 @@ TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionNanGiven) {
 	size_t n;
 	float v;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
 	mock().expectOneCall("f_float").withParameter("size", 4);
@@ -724,7 +723,7 @@ TEST(Parser, ShouldDecodeFloat_WhenSinglePrecisionNanGiven) {
 		check_item_type[items[i].type](items[i].size);
 	}
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(items, m, &v, sizeof(v)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, items, &v, sizeof(v)));
 	CHECK(isnan(v) == true);
 }
 
@@ -733,8 +732,8 @@ TEST(Parser, ShouldDecodeFalse) {
 	size_t n;
 	uint8_t v;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
 	mock().expectOneCall("f_float").withParameter("size", 1);
@@ -743,7 +742,7 @@ TEST(Parser, ShouldDecodeFalse) {
 		check_item_type[items[i].type](items[i].size);
 	}
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(items, m, &v, sizeof(v)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, items, &v, sizeof(v)));
 	LONGS_EQUAL(0, v);
 }
 TEST(Parser, ShouldDecodeTrue) {
@@ -751,8 +750,8 @@ TEST(Parser, ShouldDecodeTrue) {
 	size_t n;
 	uint8_t v;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
 	mock().expectOneCall("f_float").withParameter("size", 1);
@@ -761,7 +760,7 @@ TEST(Parser, ShouldDecodeTrue) {
 		check_item_type[items[i].type](items[i].size);
 	}
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(items, m, &v, sizeof(v)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, items, &v, sizeof(v)));
 	LONGS_EQUAL(1, v);
 }
 TEST(Parser, ShouldDecodeNull) {
@@ -769,8 +768,8 @@ TEST(Parser, ShouldDecodeNull) {
 	size_t n;
 	uint8_t v;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
 	mock().expectOneCall("f_float").withParameter("size", 1);
@@ -779,7 +778,7 @@ TEST(Parser, ShouldDecodeNull) {
 		check_item_type[items[i].type](items[i].size);
 	}
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(items, m, &v, sizeof(v)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, items, &v, sizeof(v)));
 	LONGS_EQUAL(0, v);
 }
 TEST(Parser, ShouldDecodeSimpleValue) {
@@ -787,8 +786,8 @@ TEST(Parser, ShouldDecodeSimpleValue) {
 	size_t n;
 	uint8_t v;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
 	mock().expectOneCall("f_float").withParameter("size", 1);
@@ -797,7 +796,7 @@ TEST(Parser, ShouldDecodeSimpleValue) {
 		check_item_type[items[i].type](items[i].size);
 	}
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(items, m, &v, sizeof(v)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, items, &v, sizeof(v)));
 	LONGS_EQUAL(16, v);
 }
 TEST(Parser, ShouldDecodeSimpleValue_WhenFollowingByteGiven) {
@@ -805,8 +804,8 @@ TEST(Parser, ShouldDecodeSimpleValue_WhenFollowingByteGiven) {
 	size_t n;
 	uint8_t v;
 
-	cbor_parser_init(&parser, m, sizeof(m));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), &n));
+	cbor_reader_init(&reader, m, sizeof(m));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
 	mock().expectOneCall("f_float").withParameter("size", 1);
@@ -815,50 +814,50 @@ TEST(Parser, ShouldDecodeSimpleValue_WhenFollowingByteGiven) {
 		check_item_type[items[i].type](items[i].size);
 	}
 
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(items, m, &v, sizeof(v)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, items, &v, sizeof(v)));
 	LONGS_EQUAL(255, v);
 }
 
 TEST(Parser, ShouldReturnIllegal_WhenIncompleteUnsignedIntegerGiven) {
 	for (uint8_t i = 0x18; i < 0x20; i++) {
-		cbor_parser_init(&parser, &i, sizeof(i));
-		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), 0));
+		cbor_reader_init(&reader, &i, sizeof(i));
+		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), 0));
 	}
 }
 TEST(Parser, ShouldReturnIllegal_WhenIncompleteNegativeIntegerGiven) {
 	for (uint8_t i = 0x38; i < 0x40; i++) {
-		cbor_parser_init(&parser, &i, sizeof(i));
-		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), 0));
+		cbor_reader_init(&reader, &i, sizeof(i));
+		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), 0));
 	}
 }
 TEST(Parser, ShouldReturnIllegal_WhenIncompleteStringGiven) {
 	for (uint8_t i = 0x41; i < 0x5f; i++) {
-		cbor_parser_init(&parser, &i, sizeof(i));
-		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), 0));
+		cbor_reader_init(&reader, &i, sizeof(i));
+		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), 0));
 	}
 }
 TEST(Parser, ShouldReturnIllegal_WhenIncompleteArrayGiven) {
 	for (uint8_t i = 0x81; i < 0x98; i++) {
-		cbor_parser_init(&parser, &i, sizeof(i));
-		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), 0));
+		cbor_reader_init(&reader, &i, sizeof(i));
+		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), 0));
 	}
 }
 TEST(Parser, ShouldReturnIllegal_WhenIncompleteArrayGiven2) {
 	for (uint8_t i = 0x98; i < 0x9f; i++) {
-		cbor_parser_init(&parser, &i, sizeof(i));
-		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), 0));
+		cbor_reader_init(&reader, &i, sizeof(i));
+		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), 0));
 	}
 }
 TEST(Parser, ShouldReturnIllegal_WhenIncompleteMapGiven) {
 	for (uint8_t i = 0xa1; i < 0xb8; i++) {
-		cbor_parser_init(&parser, &i, sizeof(i));
-		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), 0));
+		cbor_reader_init(&reader, &i, sizeof(i));
+		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), 0));
 	}
 }
 TEST(Parser, ShouldReturnIllegal_WhenIncompleteMapGiven2) {
 	for (uint8_t i = 0xb8; i < 0xbf; i++) {
-		cbor_parser_init(&parser, &i, sizeof(i));
-		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&parser, items, sizeof(items)/sizeof(items[0]), 0));
+		cbor_reader_init(&reader, &i, sizeof(i));
+		LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), 0));
 	}
 }
 
@@ -875,14 +874,14 @@ TEST(Parser, ShouldParseIncremental) {
 		int64_t i64;
 	} val;
 
-	cbor_parser_init(&parser, m, sizeof(m));
+	cbor_reader_init(&reader, m, sizeof(m));
 
 	for (int i = 0; i < 26; i++) {
 		size_t n;
-		cbor_parse(&parser, items, 1, &n);
+		cbor_parse(&reader, items, 1, &n);
 		LONGS_EQUAL(1, n);
 		if (items[0].type == CBOR_ITEM_INTEGER) {
-			cbor_decode(&items[0], m, &val, sizeof(val));
+			cbor_decode(&reader, &items[0], &val, sizeof(val));
 			LONGS_EQUAL(i, val.i8);
 		}
 	}

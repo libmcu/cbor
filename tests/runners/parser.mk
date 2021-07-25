@@ -4,6 +4,7 @@ SRC_FILES = \
 	../src/parser.c \
 	../src/decoder.c \
 	../src/helper.c \
+	../src/common.c \
 
 TEST_SRC_FILES = \
 	src/parser_test.cpp \

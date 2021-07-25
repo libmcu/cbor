@@ -42,10 +42,28 @@ typedef enum {
 
 typedef struct {
 	cbor_item_data_t type;
-	size_t offset;
+	union {
+		size_t offset;
+		const uint8_t *pdata;
+	};
 	size_t size; /**< either of the length of value in bytes or the number
 		       of items in case of container type */
 } cbor_item_t;
+
+typedef struct {
+	const uint8_t *msg;
+	size_t msgsize;
+	size_t msgidx;
+} cbor_reader_t;
+
+typedef struct {
+	uint8_t *buf;
+	size_t bufsize;
+	size_t bufidx;
+} cbor_writer_t;
+
+void cbor_reader_init(cbor_reader_t *reader, const void *msg, size_t msgsize);
+void cbor_writer_init(cbor_writer_t *writer, void *buf, size_t bufsize);
 
 static inline void cbor_copy_le(uint8_t *dst, const uint8_t *src, size_t len)
 {
