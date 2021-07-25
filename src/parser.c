@@ -8,7 +8,7 @@
 #define assert(expr)
 #endif
 
-struct decode_context {
+struct parser_context {
 	cbor_parser_t *parser;
 
 	cbor_item_t *items;
@@ -24,13 +24,13 @@ struct decode_context {
 
 };
 
-typedef cbor_error_t (*major_type_callback_t)(struct decode_context *ctx);
+typedef cbor_error_t (*major_type_callback_t)(struct parser_context *ctx);
 
-static cbor_error_t do_integer(struct decode_context *ctx);
-static cbor_error_t do_string(struct decode_context *ctx);
-static cbor_error_t do_recursive(struct decode_context *ctx);
-static cbor_error_t do_tag(struct decode_context *ctx);
-static cbor_error_t do_float_and_other(struct decode_context *ctx);
+static cbor_error_t do_integer(struct parser_context *ctx);
+static cbor_error_t do_string(struct parser_context *ctx);
+static cbor_error_t do_recursive(struct parser_context *ctx);
+static cbor_error_t do_tag(struct parser_context *ctx);
+static cbor_error_t do_float_and_other(struct parser_context *ctx);
 
 /* 8 callbacks for 3-bit major type */
 static const major_type_callback_t callbacks[] = {
@@ -45,7 +45,7 @@ static const major_type_callback_t callbacks[] = {
 };
 _Static_assert(sizeof(callbacks) == 8 * sizeof(major_type_callback_t), "");
 
-static bool has_valid_following_bytes(const struct decode_context *ctx,
+static bool has_valid_following_bytes(const struct parser_context *ctx,
 		cbor_error_t *err)
 {
 	*err = CBOR_SUCCESS;
@@ -66,7 +66,7 @@ static bool has_valid_following_bytes(const struct decode_context *ctx,
 	return true;
 }
 
-static size_t go_get_item_length(struct decode_context *ctx)
+static size_t go_get_item_length(struct parser_context *ctx)
 {
 	uint64_t len = 0;
 	size_t offset = 0;
@@ -86,7 +86,7 @@ static size_t go_get_item_length(struct decode_context *ctx)
 	return (size_t)len;
 }
 
-static cbor_error_t parse(struct decode_context *ctx, size_t maxitems)
+static cbor_error_t parse(struct parser_context *ctx, size_t maxitems)
 {
 	cbor_error_t err = CBOR_SUCCESS;
 
@@ -126,7 +126,7 @@ static cbor_error_t parse(struct decode_context *ctx, size_t maxitems)
 	return err;
 }
 
-static cbor_error_t do_integer(struct decode_context *ctx)
+static cbor_error_t do_integer(struct parser_context *ctx)
 {
 	if (ctx->following_bytes == (uint8_t)CBOR_INDEFINITE_VALUE) {
 		return CBOR_ILLEGAL;
@@ -143,7 +143,7 @@ static cbor_error_t do_integer(struct decode_context *ctx)
 	return CBOR_SUCCESS;
 }
 
-static cbor_error_t do_string(struct decode_context *ctx)
+static cbor_error_t do_string(struct parser_context *ctx)
 {
 	cbor_item_t *item = &ctx->items[ctx->itemidx];
 	size_t len = go_get_item_length(ctx);
@@ -166,7 +166,7 @@ static cbor_error_t do_string(struct decode_context *ctx)
 	return CBOR_SUCCESS;
 }
 
-static cbor_error_t do_recursive(struct decode_context *ctx)
+static cbor_error_t do_recursive(struct parser_context *ctx)
 {
 	size_t current_item_index = ctx->itemidx;
 	cbor_item_t *item = &ctx->items[current_item_index];
@@ -186,13 +186,13 @@ static cbor_error_t do_recursive(struct decode_context *ctx)
 }
 
 /* TODO: Implement tag */
-static cbor_error_t do_tag(struct decode_context *ctx)
+static cbor_error_t do_tag(struct parser_context *ctx)
 {
 	(void)ctx;
 	return CBOR_INVALID;
 }
 
-static cbor_error_t do_float_and_other(struct decode_context *ctx)
+static cbor_error_t do_float_and_other(struct parser_context *ctx)
 {
 	cbor_item_t *item = &ctx->items[ctx->itemidx];
 	cbor_error_t err = CBOR_SUCCESS;
@@ -219,7 +219,7 @@ static cbor_error_t do_float_and_other(struct decode_context *ctx)
 cbor_error_t cbor_parse(cbor_parser_t *parser,
 		cbor_item_t *items, size_t maxitems, size_t *items_parsed)
 {
-	struct decode_context ctx = {
+	struct parser_context ctx = {
 		.parser = parser,
 		.items = items,
 		.itemidx = 0,
