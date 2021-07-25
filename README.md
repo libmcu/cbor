@@ -31,7 +31,11 @@ And the call stack for each recursion is 32 bytes.
 ## Usage
 
 * `CBOR_BIG_ENDIAN`
+  - Define the macro for big endian machine. The default is little endian.
 * `CBOR_RECURSION_MAX_LEVEL`
+  - This is set to avoid stack overflow from recursion. The default is 4.
+
+Please see the [examples](examples).
 
 ### Parser
 
@@ -39,6 +43,7 @@ And the call stack for each recursion is 32 bytes.
 cbor_parser_t parser;
 cbor_item_t items[MAX_ITEMS];
 size_t n;
+
 cbor_parser_init(&parser, cbor_encoded_message, sizeof(cbor_encoded_message));
 cbor_parse(&parser, items, sizeof(items) / sizeof(items[0]), &n);
 
