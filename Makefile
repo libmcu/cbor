@@ -13,7 +13,7 @@ export BASEDIR
 export BUILDIR
 export Q
 
-SRCS := src/decoder.c
+SRCS := src/parser.c src/decoder.c
 INCS := include
 OBJS := $(addprefix $(BUILDIR)/, $(SRCS:.c=.o))
 DEPS := $(OBJS:.o=.d)
