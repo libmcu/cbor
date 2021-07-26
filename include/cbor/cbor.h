@@ -42,10 +42,7 @@ typedef enum {
 
 typedef struct {
 	cbor_item_data_t type;
-	union {
-		size_t offset;
-		const uint8_t *pdata;
-	};
+	size_t offset;
 	size_t size; /**< either of the length of value in bytes or the number
 		       of items in case of container type */
 } cbor_item_t;

@@ -228,3 +228,44 @@ TEST(Encoder, WhenNestedArrayGiven) {
 	LONGS_EQUAL(sizeof(expected), writer.bufidx);
 	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
 }
+
+TEST(Encoder, WhenEncodedLengthMapGiven) {
+	cbor_encode_map(&writer, 0);
+	LONGS_EQUAL(1, writer.bufidx);
+	LONGS_EQUAL(0xA0, writer.buf[0]);
+}
+TEST(Encoder, WhenEncodedLengthMapGiven2) {
+	const uint8_t expected[] = { 0xa2,0x01,0x02,0x03,0x04 };
+	cbor_encode_map(&writer, 2);
+	  cbor_encode_unsigned_integer(&writer, 1); // key
+	  cbor_encode_unsigned_integer(&writer, 2); // value
+	  cbor_encode_unsigned_integer(&writer, 3); // key
+	  cbor_encode_unsigned_integer(&writer, 4); // value
+	LONGS_EQUAL(5, writer.bufidx);
+	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
+}
+TEST(Encoder, WhenEncodedLengthMapGiven3) {
+	const uint8_t expected[] = { 0xa5,0x61,0x61,0x61,0x41,0x61,0x62,0x61,
+		0x42,0x61,0x63,0x61,0x43,0x61,0x64,0x61,
+		0x44,0x61,0x65,0x61,0x45 };
+	cbor_encode_map(&writer, 5);
+	  // 1st item
+	  cbor_encode_text_string(&writer, "a", 1);
+	  cbor_encode_text_string(&writer, "A", 1);
+	  // 2nd
+	  cbor_encode_text_string(&writer, "b", 1);
+	  cbor_encode_text_string(&writer, "B", 1);
+	  // 3
+	  cbor_encode_text_string(&writer, "c", 1);
+	  cbor_encode_text_string(&writer, "C", 1);
+	  // 4
+	  cbor_encode_text_string(&writer, "d", 1);
+	  cbor_encode_text_string(&writer, "D", 1);
+	  // 5
+	  cbor_encode_text_string(&writer, "e", 1);
+	  cbor_encode_text_string(&writer, "E", 1);
+	LONGS_EQUAL(21, writer.bufidx);
+	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
+}
+IGNORE_TEST(Encoder, WhenIndefiniteLengthMapGiven) {
+}

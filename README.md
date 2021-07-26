@@ -69,9 +69,22 @@ cbor_decode(&reader, &items[i], &val, sizeof(val));
 
 ### Encoder
 
+```c
+cbor_writer_t writer;
+
+cbor_writer_init(&reader, buf, sizeof(buf));
+
+cbor_encode_map(&writer, 2);
+  /* 1st */
+  cbor_encode_text_string(&writer, "key", 3);
+  cbor_encode_text_string(&writer, "value", 5);
+  /* 2nd */
+  cbor_encode_text_string(&writer, "age", 1);
+  cbor_encode_negative_integer(&writer, -1);
+```
+
 ## Limitation
 
 * The maximum item length is `size_t` because the interface return type is `size_t`. The argument's value in the specification can go up to `uint64_t` though
 * A negative integer ranges down to -2^63-1 other than -2^64 in the specification
 * Tag item is not implemented yet
-* Encoder is not implemented yet
