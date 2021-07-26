@@ -8,7 +8,7 @@ extern "C" {
 #include "cbor/cbor.h"
 
 const char *cbor_stringify_error(cbor_error_t err);
-const char *cbor_stringify_data_type(cbor_item_data_t type);
+const char *cbor_stringify_item(cbor_item_t *item);
 
 #if defined(__cplusplus)
 }

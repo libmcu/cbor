@@ -26,7 +26,6 @@ typedef enum {
 	CBOR_ILLEGAL, /**< not well-formed */
 	CBOR_INVALID, /**< well-formed but invalid */
 	CBOR_OVERRUN, /**< more items than given buffer space */
-	CBOR_UNDERRUN, /**< larger buffer space than data items */
 	CBOR_BREAK,
 	CBOR_EXCESSIVE, /**< recursion more than @ref CBOR_RECURSION_MAX_LEVEL */
 } cbor_error_t;
@@ -46,6 +45,21 @@ typedef struct {
 	size_t size; /**< either of the length of value in bytes or the number
 		       of items in case of container type */
 } cbor_item_t;
+
+typedef struct {
+	const uint8_t *msg;
+	size_t msgsize;
+	size_t msgidx;
+} cbor_reader_t;
+
+typedef struct {
+	uint8_t *buf;
+	size_t bufsize;
+	size_t bufidx;
+} cbor_writer_t;
+
+void cbor_reader_init(cbor_reader_t *reader, const void *msg, size_t msgsize);
+void cbor_writer_init(cbor_writer_t *writer, void *buf, size_t bufsize);
 
 static inline void cbor_copy_le(uint8_t *dst, const uint8_t *src, size_t len)
 {

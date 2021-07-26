@@ -2,6 +2,8 @@ COMPONENT_NAME = decoder
 
 SRC_FILES = \
 	../src/decoder.c \
+	../src/parser.c \
+	../src/common.c \
 
 TEST_SRC_FILES = \
 	src/decoder_test.cpp \

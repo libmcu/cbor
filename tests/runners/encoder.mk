@@ -1,12 +1,11 @@
-COMPONENT_NAME = parser
+COMPONENT_NAME = encoder
 
 SRC_FILES = \
-	../src/parser.c \
-	../src/decoder.c \
-	../src/helper.c \
+	../src/common.c \
+	../src/encoder.c \
 
 TEST_SRC_FILES = \
-	src/parser_test.cpp \
+	src/encoder_test.cpp \
 	src/test_all.cpp \
 
 INCLUDE_DIRS = \

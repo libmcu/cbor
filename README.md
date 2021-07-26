@@ -10,8 +10,8 @@ Wikipedia has [a good description](https://en.wikipedia.org/wiki/CBOR).
 * No dynamic memory allocation
 * Small code footprint
 
-The parser takes 656 bytes for ARM Cortex-M0, using arm-none-eabi-gcc
-10-2020-q4-major with optimization for code size `-Os`.
+The parser takes 634 bytes on ARM Cortex-M0 compiling with arm-none-eabi-gcc
+10-2020-q4-major, optimizing for code size `-Os`.
 
 Stack usage per the major type functions:
 
@@ -31,20 +31,26 @@ And the call stack for each recursion is 32 bytes.
 ## Usage
 
 * `CBOR_BIG_ENDIAN`
+  - Define the macro for big endian machine. The default is little endian.
 * `CBOR_RECURSION_MAX_LEVEL`
+  - This is set to avoid stack overflow from recursion. The default maximum
+    depth is 4.
+
+Please see the [examples](examples).
 
 ### Parser
 
 ```c
-cbor_parser_t parser;
+cbor_reader_t reader;
 cbor_item_t items[MAX_ITEMS];
 size_t n;
-cbor_parser_init(&parser, cbor_encoded_message, sizeof(cbor_encoded_message));
-cbor_parse(&parser, items, sizeof(items) / sizeof(items[0]), &n);
+
+cbor_reader_init(&reader, cbor_encoded_message, sizeof(cbor_encoded_message));
+cbor_parse(&reader, items, sizeof(items) / sizeof(items[0]), &n);
 
 for (i = 0; i < n; i++) {
-	printf("type: %s, size: %zu\n",
-			cbor_stringify_data_type(items[i].type), items[i].size);
+	printf("item: %s, size: %zu\n",
+			cbor_stringify_item(&items[i]), items[i].size);
 }
 ```
 
@@ -59,14 +65,28 @@ union {
 	uint8_t s[64];
 } val;
 
-cbor_decode(&items[i], cbor_encoded_message, &val, sizeof(val));
+cbor_decode(&reader, &items[i], &val, sizeof(val));
 ```
 
 ### Encoder
+
+```c
+cbor_writer_t writer;
+
+cbor_writer_init(&reader, buf, sizeof(buf));
+
+cbor_encode_map(&writer, 2);
+  /* 1st */
+  cbor_encode_text_string(&writer, "key", 3);
+  cbor_encode_text_string(&writer, "value", 5);
+  /* 2nd */
+  cbor_encode_text_string(&writer, "age", 1);
+  cbor_encode_negative_integer(&writer, -1);
+```
 
 ## Limitation
 
 * The maximum item length is `size_t` because the interface return type is `size_t`. The argument's value in the specification can go up to `uint64_t` though
 * A negative integer ranges down to -2^63-1 other than -2^64 in the specification
 * Tag item is not implemented yet
-* Encoder is not implemented yet
+* Float and simple value for encoder are not implemented yet
