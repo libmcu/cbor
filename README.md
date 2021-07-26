@@ -88,3 +88,4 @@ cbor_encode_map(&writer, 2);
 * The maximum item length is `size_t` because the interface return type is `size_t`. The argument's value in the specification can go up to `uint64_t` though
 * A negative integer ranges down to -2^63-1 other than -2^64 in the specification
 * Tag item is not implemented yet
+* Float and simple value for encoder are not implemented yet

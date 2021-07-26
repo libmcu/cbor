@@ -267,5 +267,55 @@ TEST(Encoder, WhenEncodedLengthMapGiven3) {
 	LONGS_EQUAL(21, writer.bufidx);
 	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
 }
-IGNORE_TEST(Encoder, WhenIndefiniteLengthMapGiven) {
+
+TEST(Encoder, WhenIndefiniteLengthMapGiven) {
+	const uint8_t expected[] = { 0xbf,0x61,0x61,0x01,0x61,0x62,0x9f,0x02,
+		0x03,0xff,0xff };
+	cbor_encode_map_indefinite(&writer);
+	  cbor_encode_text_string(&writer, "a", 1);
+	  cbor_encode_unsigned_integer(&writer, 1);
+	  cbor_encode_text_string(&writer, "b", 1);
+	  cbor_encode_array_indefinite(&writer);
+	    cbor_encode_unsigned_integer(&writer, 2);
+	    cbor_encode_unsigned_integer(&writer, 3);
+	  cbor_encode_break(&writer);
+	cbor_encode_break(&writer);
+	LONGS_EQUAL(11, writer.bufidx);
+	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
+}
+TEST(Encoder, WhenIndefiniteLengthMapInArrayGiven) {
+	const uint8_t expected[] = { 0x82,0x61,0x61,0xbf,0x61,0x62,0x61,0x63,
+		0xff };
+	cbor_encode_array(&writer, 2);
+	  cbor_encode_text_string(&writer, "a", 1);
+	  cbor_encode_map_indefinite(&writer);
+	    cbor_encode_text_string(&writer, "b", 1);
+	    cbor_encode_text_string(&writer, "c", 1);
+	  cbor_encode_break(&writer);
+	LONGS_EQUAL(9, writer.bufidx);
+	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
+}
+
+TEST(Encoder, WhenBreakGiven) {
+	cbor_encode_break(&writer);
+	LONGS_EQUAL(1, writer.bufidx);
+	LONGS_EQUAL(0xff, writer.buf[0]);
+}
+
+TEST(Encoder, WhenIndefiniteNestedArrayWithBreakGiven) {
+	const uint8_t expected[] = { 0x9f,0x01,0x82,0x02,0x03,0x9f,0x04,0x05,
+		0xff,0xff };
+	cbor_encode_array_indefinite(&writer);
+	  cbor_encode_unsigned_integer(&writer, 1);
+	  cbor_encode_array(&writer, 2);
+	    cbor_encode_unsigned_integer(&writer, 2);
+	    cbor_encode_unsigned_integer(&writer, 3);
+	  cbor_encode_array_indefinite(&writer);
+	    cbor_encode_unsigned_integer(&writer, 4);
+	    cbor_encode_unsigned_integer(&writer, 5);
+	  cbor_encode_break(&writer);
+	cbor_encode_break(&writer);
+
+	LONGS_EQUAL(10, writer.bufidx);
+	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
 }

@@ -107,3 +107,8 @@ cbor_error_t cbor_encode_map_indefinite(cbor_writer_t *writer)
 {
 	return encode_core(writer, 5, NULL, 0, true);
 }
+
+cbor_error_t cbor_encode_break(cbor_writer_t *writer)
+{
+	return encode_core(writer, 7, NULL, 0xff, true);
+}
