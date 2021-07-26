@@ -1,6 +1,7 @@
 COMPONENT_NAME = encoder
 
 SRC_FILES = \
+	../src/common.c \
 	../src/encoder.c \
 
 TEST_SRC_FILES = \
