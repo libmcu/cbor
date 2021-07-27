@@ -61,41 +61,10 @@ typedef struct {
 void cbor_reader_init(cbor_reader_t *reader, const void *msg, size_t msgsize);
 void cbor_writer_init(cbor_writer_t *writer, void *buf, size_t bufsize);
 
-static inline void cbor_copy_le(uint8_t *dst, const uint8_t *src, size_t len)
-{
-	for (size_t i = 0; i < len; i++) {
-		dst[len - i - 1] = src[i];
-	}
-}
+uint8_t cbor_get_following_bytes(uint8_t additional_info);
 
-static inline void cbor_copy_be(uint8_t *dst, const uint8_t *src, size_t len)
-{
-	for (size_t i = 0; i < len; i++) {
-		dst[i] = src[i];
-	}
-}
-
-static inline void cbor_copy(uint8_t *dst, const uint8_t *src, size_t len)
-{
-#if defined(CBOR_BIG_ENDIAN)
-	cbor_copy_be(dst, src, len);
-#else
-	cbor_copy_le(dst, src, len);
-#endif
-}
-
-static inline uint8_t cbor_get_following_bytes(uint8_t additional_info)
-{
-	if (additional_info < 24) {
-		return 0;
-	} else if (additional_info == 31) {
-		return (uint8_t)CBOR_INDEFINITE_VALUE;
-	} else if (additional_info >= 28) {
-		return (uint8_t)CBOR_RESERVED_VALUE;
-	}
-
-	return (uint8_t)(1u << (additional_info - 24));
-}
+void cbor_copy(uint8_t *dst, const uint8_t *src, size_t len);
+void cbor_copy_be(uint8_t *dst, const uint8_t *src, size_t len);
 
 #if defined(__cplusplus)
 }
