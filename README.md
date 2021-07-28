@@ -94,4 +94,4 @@ cbor_encode_map(&writer, 2);
 * A negative integer ranges down to -2^63-1 other than -2^64 in the specification
 * Sorting of encoded map keys is not implemented
 * Tag item is not implemented yet
-* Float and simple value for encoder are not implemented yet
+* Encoding float is not implemented yet

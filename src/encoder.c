@@ -55,6 +55,11 @@ static cbor_error_t encode_core(cbor_writer_t *writer, uint8_t major_type,
 	return CBOR_SUCCESS;
 }
 
+static cbor_error_t encode_simple(cbor_writer_t *writer, uint8_t value)
+{
+	return encode_core(writer, 7, NULL, value, false);
+}
+
 cbor_error_t cbor_encode_unsigned_integer(cbor_writer_t *writer, uint64_t value)
 {
 	return encode_core(writer, 0, NULL, value, false);
@@ -111,4 +116,24 @@ cbor_error_t cbor_encode_map_indefinite(cbor_writer_t *writer)
 cbor_error_t cbor_encode_break(cbor_writer_t *writer)
 {
 	return encode_core(writer, 7, NULL, 0xff, true);
+}
+
+cbor_error_t cbor_encode_simple(cbor_writer_t *writer, uint8_t value)
+{
+	return encode_simple(writer, value);
+}
+
+cbor_error_t cbor_encode_bool(cbor_writer_t *writer, bool value)
+{
+	return encode_simple(writer, (uint8_t)value + 20);
+}
+
+cbor_error_t cbor_encode_null(cbor_writer_t *writer)
+{
+	return encode_simple(writer, 22);
+}
+
+cbor_error_t cbor_encode_undefined(cbor_writer_t *writer)
+{
+	return encode_simple(writer, 23);
 }

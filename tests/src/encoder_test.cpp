@@ -301,6 +301,35 @@ TEST(Encoder, WhenBreakGiven) {
 	LONGS_EQUAL(1, writer.bufidx);
 	LONGS_EQUAL(0xff, writer.buf[0]);
 }
+TEST(Encoder, WhenSimpleValueGiven) {
+	cbor_encode_simple(&writer, 16);
+	LONGS_EQUAL(1, writer.bufidx);
+	LONGS_EQUAL(0xf0, writer.buf[0]);
+}
+TEST(Encoder, WhenOneByteSimpleValueGiven) {
+	cbor_encode_simple(&writer, 255);
+	LONGS_EQUAL(2, writer.bufidx);
+	LONGS_EQUAL(0xf8, writer.buf[0]);
+	LONGS_EQUAL(0xff, writer.buf[1]);
+}
+TEST(Encoder, WhenBoolenGiven) {
+	cbor_encode_bool(&writer, false);
+	LONGS_EQUAL(1, writer.bufidx);
+	LONGS_EQUAL(0xf4, writer.buf[0]);
+	cbor_encode_bool(&writer, true);
+	LONGS_EQUAL(2, writer.bufidx);
+	LONGS_EQUAL(0xf5, writer.buf[1]);
+}
+TEST(Encoder, WhenNullGiven) {
+	cbor_encode_null(&writer);
+	LONGS_EQUAL(1, writer.bufidx);
+	LONGS_EQUAL(0xf6, writer.buf[0]);
+}
+TEST(Encoder, WhenUndefinedGiven) {
+	cbor_encode_undefined(&writer);
+	LONGS_EQUAL(1, writer.bufidx);
+	LONGS_EQUAL(0xf7, writer.buf[0]);
+}
 
 TEST(Encoder, WhenIndefiniteNestedArrayWithBreakGiven) {
 	const uint8_t expected[] = { 0x9f,0x01,0x82,0x02,0x03,0x9f,0x04,0x05,
