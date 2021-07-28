@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef union {
 	uint16_t value;
@@ -34,15 +35,12 @@ typedef union {
 	} components;
 } ieee754_double_t;
 
-typedef union {
-	ieee754_half_t h;
-	ieee754_single_t s;
-	ieee754_double_t d;
-} ieee754_t;
+float ieee754_convert_half_to_single(uint16_t value);
+uint16_t ieee754_convert_single_to_half(float value);
+uint16_t ieee754_convert_double_to_half(double value);
 
-ieee754_single_t ieee754_convert_half_to_single(uint16_t value);
-ieee754_half_t ieee754_convert_single_to_half(float value);
-ieee754_half_t ieee754_convert_double_to_half(double value);
+bool ieee754_is_shrinkable_to_half(float value);
+bool ieee754_is_shrinkable_to_single(double value);
 
 #if defined(__cplusplus)
 }
