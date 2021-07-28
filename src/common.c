@@ -45,6 +45,16 @@ uint8_t cbor_get_following_bytes(uint8_t additional_info)
 	return (uint8_t)(1u << (additional_info - 24));
 }
 
+cbor_item_data_t cbor_get_item_type(const cbor_item_t *item)
+{
+	return item->type;
+}
+
+size_t cbor_get_item_size(const cbor_item_t *item)
+{
+	return item->size;
+}
+
 void cbor_reader_init(cbor_reader_t *reader, const void *msg, size_t msgsize)
 {
 	assert(parser != NULL);

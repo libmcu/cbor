@@ -10,25 +10,8 @@ Wikipedia has [a good description](https://en.wikipedia.org/wiki/CBOR).
 * No dynamic memory allocation
 * Small code footprint
 
-The parser takes 634 bytes on ARM Cortex-M0 compiling with arm-none-eabi-gcc
-10-2020-q4-major, optimizing for code size `-Os`.
-
-Stack usage per the major type functions:
-
-| Major type                                         | Bytes |
-| -------------------------------------------------- | ----- |
-| 0: unsigned integer                                | 12    |
-| 1: negative integer                                | 12    |
-| 2: byte string                                     | 56    |
-| 3: text string                                     | 56    |
-| 4: array                                           | 56    |
-| 5: map                                             | 56    |
-| 6: tag(not implemented yet)                        | 0     |
-| 7: floating-point numbers, simple values and break | 20    |
-
-And the call stack for each recursion is 32 bytes.
-
 ## Usage
+Please see the [examples](examples).
 
 * `CBOR_BIG_ENDIAN`
   - Define the macro for big endian machine. The default is little endian.
@@ -36,21 +19,40 @@ And the call stack for each recursion is 32 bytes.
   - This is set to avoid stack overflow from recursion. The default maximum
     depth is 4.
 
-Please see the [examples](examples).
-
 ### Parser
+
+The parser takes 626 bytes on ARM Cortex-M0 optimizing for code size `-Os`.
+[arm-none-eabi-gcc
+10-2020-q4-major](https://developer.arm.com/-/media/Files/downloads/gnu-rm/10-2020q4/gcc-arm-none-eabi-10-2020-q4-major-src.tar.bz2?revision=8f69a18b-dbe3-45ec-b896-3ba56844938d&hash=946C702B1C99A84CD0C441357D578E80B2A56EF9)
+was used for the check.
+
+Stack usage per the major type functions:
+
+| Major type                                         | Bytes |
+| -------------------------------------------------- | ----- |
+| 0: unsigned integer                                | 12    |
+| 1: negative integer                                | 12    |
+| 2: byte string                                     | 32    |
+| 3: text string                                     | 32    |
+| 4: array                                           | 32    |
+| 5: map                                             | 32    |
+| 6: tag(not implemented yet)                        | 0     |
+| 7: floating-point numbers, simple values and break | 32    |
+
+And the call stack for each recursion is 24 bytes.
 
 ```c
 cbor_reader_t reader;
 cbor_item_t items[MAX_ITEMS];
 size_t n;
 
-cbor_reader_init(&reader, cbor_encoded_message, sizeof(cbor_encoded_message));
-cbor_parse(&reader, items, sizeof(items) / sizeof(items[0]), &n);
+cbor_reader_init(&reader, cbor_message, sizeof(cbor_message));
+cbor_parse(&reader, items, MAX_ITEMS, &n);
 
 for (i = 0; i < n; i++) {
 	printf("item: %s, size: %zu\n",
-			cbor_stringify_item(&items[i]), items[i].size);
+			cbor_stringify_item(&items[i]),
+			cbor_get_item_size(&items[i]);
 }
 ```
 
@@ -62,7 +64,9 @@ union {
 	int16_t i16;
 	int32_t i32;
 	int64_t i64
-	uint8_t s[64];
+	float f32;
+	double f64;
+	uint8_t s[MTU];
 } val;
 
 cbor_decode(&reader, &items[i], &val, sizeof(val));
@@ -88,5 +92,6 @@ cbor_encode_map(&writer, 2);
 
 * The maximum item length is `size_t` because the interface return type is `size_t`. The argument's value in the specification can go up to `uint64_t` though
 * A negative integer ranges down to -2^63-1 other than -2^64 in the specification
+* Sorting of encoded map keys is not implemented
 * Tag item is not implemented yet
 * Float and simple value for encoder are not implemented yet

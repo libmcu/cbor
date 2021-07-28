@@ -36,7 +36,8 @@ typedef enum {
 	CBOR_ITEM_STRING, /**< byte string and text string */
 	CBOR_ITEM_ARRAY,
 	CBOR_ITEM_MAP,
-	CBOR_ITEM_FLOAT_AND_SIMPLE_VALUE,
+	CBOR_ITEM_FLOAT,
+	CBOR_ITEM_SIMPLE_VALUE,
 } cbor_item_data_t;
 
 typedef struct {
@@ -60,6 +61,9 @@ typedef struct {
 
 void cbor_reader_init(cbor_reader_t *reader, const void *msg, size_t msgsize);
 void cbor_writer_init(cbor_writer_t *writer, void *buf, size_t bufsize);
+
+cbor_item_data_t cbor_get_item_type(const cbor_item_t *item);
+size_t cbor_get_item_size(const cbor_item_t *item);
 
 uint8_t cbor_get_following_bytes(uint8_t additional_info);
 

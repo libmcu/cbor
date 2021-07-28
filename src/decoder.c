@@ -16,6 +16,8 @@ static cbor_error_t decode_string(const cbor_item_t *item, const uint8_t *msg,
 		uint8_t *buf, size_t bufsize);
 static cbor_error_t decode_float(const cbor_item_t *item, const uint8_t *msg,
 		uint8_t *buf, size_t bufsize);
+static cbor_error_t decode_simple(const cbor_item_t *item, const uint8_t *msg,
+		uint8_t *buf, size_t bufsize);
 
 static const item_callback_t callbacks[] = {
 	decode_pass,		/* 0: CBOR_ITEM_UNKNOWN */
@@ -23,7 +25,8 @@ static const item_callback_t callbacks[] = {
 	decode_string,		/* 2: CBOR_ITEM_STRING */
 	decode_pass,		/* 3: CBOR_ITEM_ARRAY */
 	decode_pass,		/* 4: CBOR_ITEM_MAP */
-	decode_float,		/* 5: CBOR_ITEM_FLOAT_AND_SIMPLE_VALUE */
+	decode_float,		/* 5: CBOR_ITEM_FLOAT */
+	decode_simple,		/* 6: CBOR_ITEM_SIMPLE_VALUE */
 };
 
 static uint8_t get_simple_value(uint8_t val)
@@ -43,8 +46,7 @@ static uint8_t get_simple_value(uint8_t val)
 
 static bool is_break(const cbor_item_t *item)
 {
-	return item->type == CBOR_ITEM_FLOAT_AND_SIMPLE_VALUE
-		&& item->size == 0xff;
+	return item->type == CBOR_ITEM_FLOAT && item->size == 0xff;
 }
 
 static cbor_error_t decode_unsigned_integer(const cbor_item_t *item,
@@ -116,19 +118,15 @@ static cbor_error_t decode_string(const cbor_item_t *item, const uint8_t *msg,
 static cbor_error_t decode_float(const cbor_item_t *item, const uint8_t *msg,
 		uint8_t *buf, size_t bufsize)
 {
-	uint8_t following_bytes = cbor_get_following_bytes(
-			get_cbor_additional_info(msg[item->offset]));
-	cbor_error_t err;
+	return decode_unsigned_integer(item, msg, buf, bufsize);
+}
 
-	if (following_bytes == 1) {
-		following_bytes = 0;
-	}
+static cbor_error_t decode_simple(const cbor_item_t *item, const uint8_t *msg,
+		uint8_t *buf, size_t bufsize)
+{
+	cbor_error_t err = decode_unsigned_integer(item, msg, buf, bufsize);
 
-	err = decode_unsigned_integer(item, msg, buf, bufsize);
-
-	if (following_bytes == 0) {
-		buf[0] = get_simple_value(buf[0]);
-	}
+	buf[0] = get_simple_value(buf[0]);
 
 	return err;
 }

@@ -27,6 +27,9 @@ static void f_map(size_t size) {
 static void f_float(size_t size) {
 	mock().actualCall(__func__).withParameter("size", size);
 }
+static void f_simple(size_t size) {
+	mock().actualCall(__func__).withParameter("size", size);
+}
 
 static check_func_t check_item_type[] = {
 	f_unknown,
@@ -35,6 +38,7 @@ static check_func_t check_item_type[] = {
 	f_array,
 	f_map,
 	f_float,
+	f_simple,
 };
 
 TEST_GROUP(Decoder) {
@@ -736,7 +740,7 @@ TEST(Decoder, ShouldDecodeFalse) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
-	mock().expectOneCall("f_float").withParameter("size", 1);
+	mock().expectOneCall("f_simple").withParameter("size", 1);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
@@ -754,7 +758,7 @@ TEST(Decoder, ShouldDecodeTrue) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
-	mock().expectOneCall("f_float").withParameter("size", 1);
+	mock().expectOneCall("f_simple").withParameter("size", 1);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
@@ -772,7 +776,7 @@ TEST(Decoder, ShouldDecodeNull) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
-	mock().expectOneCall("f_float").withParameter("size", 1);
+	mock().expectOneCall("f_simple").withParameter("size", 1);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
@@ -790,7 +794,7 @@ TEST(Decoder, ShouldDecodeSimpleValue) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
-	mock().expectOneCall("f_float").withParameter("size", 1);
+	mock().expectOneCall("f_simple").withParameter("size", 1);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
@@ -808,7 +812,7 @@ TEST(Decoder, ShouldDecodeSimpleValue_WhenFollowingByteGiven) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
-	mock().expectOneCall("f_float").withParameter("size", 1);
+	mock().expectOneCall("f_simple").withParameter("size", 1);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);

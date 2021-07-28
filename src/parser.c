@@ -197,7 +197,7 @@ static cbor_error_t do_float_and_other(struct parser_context *ctx)
 	cbor_item_t *item = &ctx->items[ctx->itemidx];
 	cbor_error_t err = CBOR_SUCCESS;
 
-	item->type = CBOR_ITEM_FLOAT_AND_SIMPLE_VALUE;
+	item->type = CBOR_ITEM_FLOAT;
 	item->size = (size_t)ctx->following_bytes + !ctx->following_bytes;
 	item->offset = ctx->reader->msgidx;
 
@@ -205,9 +205,10 @@ static cbor_error_t do_float_and_other(struct parser_context *ctx)
 		ctx->reader->msgidx++;
 		ctx->itemidx++;
 		return CBOR_BREAK;
-	}
-	if (!has_valid_following_bytes(ctx, &err)) {
+	} else if (!has_valid_following_bytes(ctx, &err)) {
 		return err;
+	} else if (ctx->following_bytes <= 1) {
+		item->type = CBOR_ITEM_SIMPLE_VALUE;
 	}
 
 	ctx->reader->msgidx += item->size + 1;
