@@ -67,8 +67,8 @@ size_t cbor_get_item_size(const cbor_item_t *item);
 
 uint8_t cbor_get_following_bytes(uint8_t additional_info);
 
-void cbor_copy(uint8_t *dst, const uint8_t *src, size_t len);
-void cbor_copy_be(uint8_t *dst, const uint8_t *src, size_t len);
+size_t cbor_copy(uint8_t *dst, const uint8_t *src, size_t len);
+size_t cbor_copy_be(uint8_t *dst, const uint8_t *src, size_t len);
 
 #if defined(__cplusplus)
 }

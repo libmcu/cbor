@@ -37,7 +37,6 @@ typedef union {
 
 float ieee754_convert_half_to_single(uint16_t value);
 uint16_t ieee754_convert_single_to_half(float value);
-uint16_t ieee754_convert_double_to_half(double value);
 
 bool ieee754_is_shrinkable_to_half(float value);
 bool ieee754_is_shrinkable_to_single(double value);

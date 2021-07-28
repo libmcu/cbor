@@ -3,6 +3,7 @@ COMPONENT_NAME = encoder
 SRC_FILES = \
 	../src/common.c \
 	../src/encoder.c \
+	../src/ieee754.c \
 
 TEST_SRC_FILES = \
 	src/encoder_test.cpp \

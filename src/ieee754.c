@@ -57,35 +57,20 @@ static bool is_precision_lost(uint64_t m, unsigned int f, unsigned int t)
 uint16_t ieee754_convert_single_to_half(float value)
 {
 	ieee754_single_t single = { .value = value };
-	ieee754_half_t half;
+	ieee754_half_t half = { .value = 0 };
 
 	half.components.sign = single.components.sign;
-	half.components.e = single.components.e & E_MASK_HALF;
-	if (half.components.e == E_MASK_HALF) { /* NaN or infinity */
-		half.components.m = single.components.m & M_MASK_HALF;
-	} else { /* normal */
-		half.components.m =
-			(single.components.m >> (M_BIT_SINGLE - M_BIT_HALF))
-			& M_MASK_HALF;
+	if (single.components.e == E_MASK_SINGLE) { /* NaN or infinity */
+		half.components.e = E_MASK_HALF;
+	} else { /* normal and subnormal */
+		if (single.components.e != 0) {
+			half.components.e = (uint8_t)(single.components.e
+				- BIAS_SINGLE + BIAS_HALF) & E_MASK_HALF;
+		}
 	}
 
-	return half.value;
-}
-
-uint16_t ieee754_convert_double_to_half(double value)
-{
-	ieee754_double_t d = { .value = value };
-	ieee754_half_t half;
-
-	half.components.sign = d.components.sign;
-	half.components.e = d.components.e & E_MASK_HALF;
-	if (half.components.e == E_MASK_HALF) { /* NaN or infinity */
-		half.components.m = d.components.m & M_MASK_HALF;
-	} else { /* normal */
-		half.components.m =
-			(d.components.m >> (M_BIT_DOUBLE - M_BIT_HALF))
-			& M_MASK_HALF;
-	}
+	half.components.m = (single.components.m >> (M_BIT_SINGLE - M_BIT_HALF))
+		& M_MASK_HALF;
 
 	return half.value;
 }

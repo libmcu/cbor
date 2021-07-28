@@ -137,3 +137,42 @@ cbor_error_t cbor_encode_undefined(cbor_writer_t *writer)
 {
 	return encode_simple(writer, 23);
 }
+
+#include "cbor/ieee754.h"
+
+static cbor_error_t encode_float(cbor_writer_t *writer, float value)
+{
+	if (ieee754_is_shrinkable_to_half(value)) {
+		uint16_t half = ieee754_convert_single_to_half(value);
+
+		writer->buf[writer->bufidx++] = 0xF9;
+		writer->bufidx += cbor_copy(&writer->buf[writer->bufidx],
+				(const uint8_t *)&half, sizeof(half));
+
+		return CBOR_SUCCESS;
+	}
+
+	writer->buf[writer->bufidx++] = 0xFA;
+	writer->bufidx += cbor_copy(&writer->buf[writer->bufidx],
+			(const uint8_t *)&value, sizeof(value));
+
+	return CBOR_SUCCESS;
+}
+
+cbor_error_t cbor_encode_float(cbor_writer_t *writer, float value)
+{
+	return encode_float(writer, value);
+}
+
+cbor_error_t cbor_encode_double(cbor_writer_t *writer, double value)
+{
+	if (ieee754_is_shrinkable_to_single(value)) {
+		return encode_float(writer, (float)value);
+	}
+
+	writer->buf[writer->bufidx++] = 0xFB;
+	writer->bufidx += cbor_copy(&writer->buf[writer->bufidx],
+			(const uint8_t *)&value, sizeof(value));
+
+	return CBOR_SUCCESS;
+}
