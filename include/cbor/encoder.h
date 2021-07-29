@@ -32,6 +32,9 @@ cbor_error_t cbor_encode_bool(cbor_writer_t *writer, bool value);
 cbor_error_t cbor_encode_null(cbor_writer_t *writer);
 cbor_error_t cbor_encode_undefined(cbor_writer_t *writer);
 
+cbor_error_t cbor_encode_float(cbor_writer_t *writer, float value);
+cbor_error_t cbor_encode_double(cbor_writer_t *writer, double value);
+
 #if defined(__cplusplus)
 }
 #endif

@@ -4,32 +4,36 @@
 #define assert(expr)
 #endif
 
-static void copy_le(uint8_t *dst, const uint8_t *src, size_t len)
+static size_t copy_le(uint8_t *dst, const uint8_t *src, size_t len)
 {
 	for (size_t i = 0; i < len; i++) {
 		dst[len - i - 1] = src[i];
 	}
+
+	return len;
 }
 
-static void copy_be(uint8_t *dst, const uint8_t *src, size_t len)
+static size_t copy_be(uint8_t *dst, const uint8_t *src, size_t len)
 {
 	for (size_t i = 0; i < len; i++) {
 		dst[i] = src[i];
 	}
+
+	return len;
 }
 
-void cbor_copy(uint8_t *dst, const uint8_t *src, size_t len)
+size_t cbor_copy(uint8_t *dst, const uint8_t *src, size_t len)
 {
 #if defined(CBOR_BIG_ENDIAN)
-	copy_be(dst, src, len);
+	return copy_be(dst, src, len);
 #else
-	copy_le(dst, src, len);
+	return copy_le(dst, src, len);
 #endif
 }
 
-void cbor_copy_be(uint8_t *dst, const uint8_t *src, size_t len)
+size_t cbor_copy_be(uint8_t *dst, const uint8_t *src, size_t len)
 {
-	copy_be(dst, src, len);
+	return copy_be(dst, src, len);
 }
 
 uint8_t cbor_get_following_bytes(uint8_t additional_info)

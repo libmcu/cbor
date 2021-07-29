@@ -1,12 +1,10 @@
-COMPONENT_NAME = encoder
+COMPONENT_NAME = ieee754
 
 SRC_FILES = \
-	../src/common.c \
-	../src/encoder.c \
 	../src/ieee754.c \
 
 TEST_SRC_FILES = \
-	src/encoder_test.cpp \
+	src/ieee754_test.cpp \
 	src/test_all.cpp \
 
 INCLUDE_DIRS = \
