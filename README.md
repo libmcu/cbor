@@ -10,6 +10,21 @@ Wikipedia has [a good description](https://en.wikipedia.org/wiki/CBOR).
 * No dynamic memory allocation
 * Small code footprint
 
+## Build
+### Make
+
+```make
+CBOR_ROOT ?= <THIRD_PARTY_DIR>/cbor
+include $(CBOR_ROOT)/cbor.mk
+```
+
+### CMake
+
+```cmake
+set(CBOR_ROOT <THIRD_PARTY_DIR>/cbor)
+include(${CBOR_ROOT}/cbor.cmake)
+```
+
 ## Usage
 Please see the [examples](examples).
 

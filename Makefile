@@ -13,8 +13,11 @@ export BASEDIR
 export BUILDIR
 export Q
 
-SRCS := src/common.c src/parser.c src/decoder.c src/encoder.c src/ieee754.c
-INCS := include
+CBOR_ROOT := ./
+include $(CBOR_ROOT)/cbor.mk
+
+SRCS := $(CBOR_SRCS)
+INCS := $(CBOR_INCS)
 OBJS := $(addprefix $(BUILDIR)/, $(SRCS:.c=.o))
 DEPS := $(OBJS:.o=.d)
 

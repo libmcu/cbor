@@ -30,8 +30,10 @@ const char *cbor_stringify_item(cbor_item_t *item)
 		return "array";
 	case CBOR_ITEM_MAP:
 		return "map";
-	case CBOR_ITEM_FLOAT_AND_SIMPLE_VALUE:
-		return "float and simple value";
+	case CBOR_ITEM_FLOAT:
+		return "float";
+	case CBOR_ITEM_SIMPLE_VALUE:
+		return "simple value";
 	case CBOR_ITEM_UNKNOWN: /* fall through */
 	default:
 		return "unknown";
