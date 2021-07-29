@@ -87,9 +87,16 @@ $(BUILDIR)/%.o: %.c $(MAKEFILE_LIST)
 		$(addprefix -I, $(INCS)) \
 		$(CFLAGS)
 
-.PHONY: test
+.PHONY: test fuzz
 test:
 	$(Q)$(MAKE) -C tests
+fuzz:
+	$(Q)clang++ -g -fsanitize=address,fuzzer \
+		-o tests/build/fuzz_testing \
+		$(addprefix -D, $(DEFS)) \
+		$(addprefix -I, $(INCS)) \
+		$(SRCS) tests/src/parser_fuzz_test.c
+	$(Q)./tests/build/fuzz_testing
 .PHONY: coverage
 coverage:
 	$(Q)$(MAKE) -C tests $@

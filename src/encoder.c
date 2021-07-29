@@ -1,4 +1,5 @@
 #include "cbor/encoder.h"
+#include "cbor/ieee754.h"
 
 #define MAJOR_TYPE_BIT			5
 
@@ -137,8 +138,6 @@ cbor_error_t cbor_encode_undefined(cbor_writer_t *writer)
 {
 	return encode_simple(writer, 23);
 }
-
-#include "cbor/ieee754.h"
 
 static cbor_error_t encode_float(cbor_writer_t *writer, float value)
 {
