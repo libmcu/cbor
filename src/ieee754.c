@@ -25,7 +25,6 @@
  */
 
 #include "cbor/ieee754.h"
-#include <string.h> /* fls() */
 
 #define BIAS_HALF				15
 #define BIAS_SINGLE				127
@@ -42,6 +41,18 @@
 #define M_MASK_HALF				((1u << M_BIT_HALF) - 1)
 #define M_MASK_SINGLE				((1ul << M_BIT_SINGLE) - 1)
 #define M_MASK_DOUBLE				((1ull << M_BIT_DOUBLE) - 1)
+
+static int find_last_set_bit(unsigned int value)
+{
+	int cnt = 0;
+
+	while (value != 0) {
+		value >>= 1;
+		cnt++;
+	}
+
+	return cnt;
+}
 
 static bool is_over_range(unsigned int e, unsigned int f, unsigned int t)
 {
@@ -135,8 +146,8 @@ double ieee754_convert_half_to_double(uint16_t value)
 	} else if (half.components.e == 0) { /* zero or subnormal */
 		if (half.components.m != 0) { /* subnormal */
 			/* find the leading 1 to nomalize */
-			uint64_t leading_shift = (uint64_t)
-				(M_BIT_HALF - fls(half.components.m) + 1);
+			uint64_t leading_shift = (uint64_t)(M_BIT_HALF -
+					find_last_set_bit(half.components.m) + 1);
 			d.components.m <<= leading_shift;
 			d.components.e =
 				(BIAS_DOUBLE - BIAS_HALF - leading_shift + 1)
