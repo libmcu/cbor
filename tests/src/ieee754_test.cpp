@@ -50,8 +50,6 @@ TEST(IEEE754, ShouldConvertToHalf_WhenHalfPrecisionSingleValueGiven) {
 TEST(IEEE754, ShouldKeepSingle_WhenSinglePrecisionGiven) {
 	s.components.sign = 0;
 	s.components.m = 0;
-	s.components.e = 127-15;
-	LONGS_EQUAL(0, ieee754_is_shrinkable_to_half(s.value));
 	s.components.e = 127+16;
 	LONGS_EQUAL(0, ieee754_is_shrinkable_to_half(s.value));
 
@@ -62,6 +60,12 @@ TEST(IEEE754, ShouldKeepSingle_WhenSinglePrecisionGiven) {
 	s.components.e = 0;
 	s.components.m = 0x800;
 	LONGS_EQUAL(0, ieee754_is_shrinkable_to_half(s.value));
+}
+TEST(IEEE754, ShouldConvertToHalf_WhenHalfSubnormalGiven) {
+	s.components.sign = 0;
+	s.components.m = 0;
+	s.components.e = 127-15;
+	LONGS_EQUAL(1, ieee754_is_shrinkable_to_half(s.value));
 }
 
 TEST(IEEE754, ShouldConvertToHalf_WhenDoublePrecisionZeroGiven) {
@@ -98,8 +102,6 @@ TEST(IEEE754, ShouldConvertToSingle_WhenSinglePrecisionDoubleValueGiven) {
 TEST(IEEE754, ShouldKeepDouble_WhenDoublePrecisionGiven) {
 	d.components.sign = 0;
 	d.components.m = 0;
-	d.components.e = 1023-127;
-	LONGS_EQUAL(0, ieee754_is_shrinkable_to_single(d.value));
 	d.components.e = 1023+128;
 	LONGS_EQUAL(0, ieee754_is_shrinkable_to_single(d.value));
 
@@ -110,4 +112,10 @@ TEST(IEEE754, ShouldKeepDouble_WhenDoublePrecisionGiven) {
 	d.components.e = 0;
 	d.components.m = 0x10000000ull;
 	LONGS_EQUAL(0, ieee754_is_shrinkable_to_single(d.value));
+}
+TEST(IEEE754, ShouldConvertToSingle_WhenSubnormalGiven) {
+	d.components.sign = 0;
+	d.components.m = 0;
+	d.components.e = 1023-127;
+	LONGS_EQUAL(1, ieee754_is_shrinkable_to_single(d.value));
 }

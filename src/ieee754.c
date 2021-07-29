@@ -16,6 +16,12 @@
  * | 1 | 0xff |  0 | -infinity     |
  * | X | 0xff | -1 | Quiet NaN     |
  * | X | 0xff | !0 | Signaling NaN |
+ *
+ * ## Terms
+ * - f: source bias
+ * - t: target bias
+ * - e: exponent
+ * - m: mantissa
  */
 
 #include "cbor/ieee754.h"
@@ -61,6 +67,15 @@ static bool is_in_range(unsigned int e, unsigned int f, unsigned int t)
 	return true;
 }
 
+static bool is_in_subrange(unsigned int e, unsigned int target_m_bits,
+		unsigned int f, unsigned int t)
+{
+	if (is_under_range(e, f, t) && (f - e - t) < target_m_bits) {
+		return true;
+	}
+	return false;
+}
+
 static bool is_precision_lost(uint64_t m, unsigned int f, unsigned int t)
 {
 	if ((m & ((1ull << (f - t)) - 1)) != 0) {
@@ -85,7 +100,7 @@ uint16_t ieee754_convert_single_to_half(float value)
 		single.components.m = 0;
 	} else if (is_under_range(single.components.e, BIAS_SINGLE, BIAS_HALF)) {
 		/* expand the exponent to the mantissa to make it subnormal */
-		exp += (BIAS_SINGLE - single.components.e) - BIAS_HALF;
+		exp += (uint8_t)((BIAS_SINGLE - single.components.e) - BIAS_HALF);
 		single.components.m = M_MASK_SINGLE;
 	} else { /* zero, normal */
 		if (single.components.e != 0) {
@@ -123,8 +138,9 @@ double ieee754_convert_half_to_double(uint16_t value)
 			uint64_t leading_shift = (uint64_t)
 				(M_BIT_HALF - fls(half.components.m) + 1);
 			d.components.m <<= leading_shift;
-			d.components.e = BIAS_DOUBLE - BIAS_HALF -
-				leading_shift + 1;
+			d.components.e =
+				(BIAS_DOUBLE - BIAS_HALF - leading_shift + 1)
+				& E_MASK_DOUBLE;
 		}
 	} else { /* normal */
 		d.components.e = BIAS_DOUBLE + (half.components.e - BIAS_HALF);
@@ -154,6 +170,9 @@ bool ieee754_is_shrinkable_to_half(float value)
 			!is_precision_lost(single.components.m, M_BIT_SINGLE,
 				M_BIT_HALF)) {
 		return true;
+	} else if (is_in_subrange(single.components.e, M_BIT_HALF,
+				BIAS_SINGLE, BIAS_HALF)) {
+		return true;
 	}
 
 	return false;
@@ -177,6 +196,9 @@ bool ieee754_is_shrinkable_to_single(double value)
 	} else if (is_in_range(d.components.e, BIAS_DOUBLE, BIAS_SINGLE) &&
 			!is_precision_lost(d.components.m, M_BIT_DOUBLE,
 				M_BIT_SINGLE)) {
+		return true;
+	} else if (is_in_subrange(d.components.e, M_BIT_SINGLE,
+				BIAS_DOUBLE, BIAS_SINGLE)) {
 		return true;
 	}
 
