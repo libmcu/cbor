@@ -380,31 +380,43 @@ TEST(Encoder, WhenNegativeZeroFloatGiven) {
 	LONGS_EQUAL(3, writer.bufidx);
 	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
 }
-TEST(Encoder, WhenHalfPrecisionFloatGiven1) {
+TEST(Encoder, WhenFloatOneGiven) {
 	const uint8_t expected[] = { 0xf9,0x3c,0x00 };
 	cbor_encode_float(&writer, 1.f);
 	LONGS_EQUAL(3, writer.bufidx);
 	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
 }
-TEST(Encoder, WhenHalfPrecisionFloatGiven2) {
+TEST(Encoder, WhenFloatOneHalfGiven) {
 	const uint8_t expected[] = { 0xf9,0x3e,0x00 };
 	cbor_encode_float(&writer, 1.5f);
 	LONGS_EQUAL(3, writer.bufidx);
 	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
 }
-TEST(Encoder, WhenHalfPrecisionFloatGiven3) {
+TEST(Encoder, WhenLargestHalfPrecisionFloatGiven) {
 	const uint8_t expected[] = { 0xf9,0x7b,0xff };
 	cbor_encode_float(&writer, 65504.f);
 	LONGS_EQUAL(3, writer.bufidx);
 	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
 }
-TEST(Encoder, WhenHalfPrecisionFloatGiven4) {
+TEST(Encoder, WhenSmallestHalfPrecisionFloatGiven) {
+	const uint8_t expected[] = { 0xf9,0x03,0xff };
+	cbor_encode_float(&writer, 0.00006097555160522461);
+	LONGS_EQUAL(3, writer.bufidx);
+	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
+}
+TEST(Encoder, WhenLargestHalfSubnormalGiven) {
 	const uint8_t expected[] = { 0xf9,0x04,0x00 };
 	cbor_encode_double(&writer, 0.00006103515625);
 	LONGS_EQUAL(3, writer.bufidx);
 	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
 }
-TEST(Encoder, WhenHalfPrecisionFloatGiven5) {
+TEST(Encoder, WhenSmallestHalfSubNormalGiven) {
+	const uint8_t expected[] = { 0xf9,0x00,0x01 };
+	cbor_encode_double(&writer, 5.960464477539063e-8);
+	LONGS_EQUAL(3, writer.bufidx);
+	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
+}
+TEST(Encoder, WhenHalfPrecisionFloatGiven) {
 	const uint8_t expected[] = { 0xf9,0xc4,0x00 };
 	cbor_encode_double(&writer, -4.);
 	LONGS_EQUAL(3, writer.bufidx);

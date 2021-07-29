@@ -1,11 +1,11 @@
 /*
- * | precision | sign | exponent | mantissa | bias |
- * | --------- | ---- | -------- | -------- | ---- |
- * | half      | 1    |  5       | 10       |   15 |
- * | single    | 1    |  8       | 23       |  127 |
- * | double    | 1    | 11       | 52       | 1023 |
+ * | precision | sign | exponent | mantissa | bias |   exp range  |
+ * | --------- | ---- | -------- | -------- | ---- | ------------ |
+ * | half      | 1    |  5       | 10       |   15 |   -14 ~   15 |
+ * | single    | 1    |  8       | 23       |  127 |  -126 ~  127 |
+ * | double    | 1    | 11       | 52       | 1023 | -1022 ~ 1023 |
  *
- * ## Secial cases
+ * ## Special cases
  * | s |   e  | m  |     desc.     |
  * | - | -----| -- | ------------- |
  * | 0 |    0 |  0 | +0.0          |
@@ -19,6 +19,7 @@
  */
 
 #include "cbor/ieee754.h"
+#include <string.h> /* fls() */
 
 #define BIAS_HALF				15
 #define BIAS_SINGLE				127
@@ -34,15 +35,30 @@
 
 #define M_MASK_HALF				((1u << M_BIT_HALF) - 1)
 #define M_MASK_SINGLE				((1ul << M_BIT_SINGLE) - 1)
-//#define M_MASK_DOUBLE				((1ull << M_BIT_DOUBLE) - 1)
+#define M_MASK_DOUBLE				((1ull << M_BIT_DOUBLE) - 1)
+
+static bool is_over_range(unsigned int e, unsigned int f, unsigned int t)
+{
+	if (e > (f + t)) {
+		return true;
+	}
+	return false;
+}
+
+static bool is_under_range(unsigned int e, unsigned int f, unsigned int t)
+{
+	if (e < (f - t + 1)) {
+		return true;
+	}
+	return false;
+}
 
 static bool is_in_range(unsigned int e, unsigned int f, unsigned int t)
 {
-	if (e <= (f + t) && e >= (f - t + 1)) {
-		return true;
+	if (is_over_range(e, f, t) || is_under_range(e, f, t)) {
+		return false;
 	}
-
-	return false;
+	return true;
 }
 
 static bool is_precision_lost(uint64_t m, unsigned int f, unsigned int t)
@@ -58,40 +74,65 @@ uint16_t ieee754_convert_single_to_half(float value)
 {
 	ieee754_single_t single = { .value = value };
 	ieee754_half_t half = { .value = 0 };
+	uint8_t exp = M_BIT_SINGLE - M_BIT_HALF;
 
 	half.components.sign = single.components.sign;
 	if (single.components.e == E_MASK_SINGLE) { /* NaN or infinity */
 		half.components.e = E_MASK_HALF;
-	} else { /* normal and subnormal */
+	} else if (is_over_range(single.components.e, BIAS_SINGLE, BIAS_HALF)) {
+		/* make it NaN */
+		half.components.e = E_MASK_HALF;
+		single.components.m = 0;
+	} else if (is_under_range(single.components.e, BIAS_SINGLE, BIAS_HALF)) {
+		/* expand the exponent to the mantissa to make it subnormal */
+		exp += (BIAS_SINGLE - single.components.e) - BIAS_HALF;
+		single.components.m = M_MASK_SINGLE;
+	} else { /* zero, normal */
 		if (single.components.e != 0) {
 			half.components.e = (uint8_t)(single.components.e
 				- BIAS_SINGLE + BIAS_HALF) & E_MASK_HALF;
 		}
 	}
 
-	half.components.m = (single.components.m >> (M_BIT_SINGLE - M_BIT_HALF))
-		& M_MASK_HALF;
+	/* precision may be lost discarding outrange lower bits */
+	half.components.m = (single.components.m >> exp) & M_MASK_HALF;
 
 	return half.value;
 }
 
-float ieee754_convert_half_to_single(uint16_t value)
+double ieee754_convert_half_to_double(uint16_t value)
 {
 	ieee754_half_t half = { .value = value };
-	ieee754_single_t single;
+	ieee754_double_t d;
+	uint8_t exp = M_BIT_DOUBLE - M_BIT_HALF;
 
-	single.components.sign = half.components.sign;
-	single.components.e = half.components.e;
-	single.components.m = half.components.m;
+	d.components.sign = half.components.sign;
+	d.components.e = half.components.e;
+	d.components.m = half.components.m;
 
-	if (half.components.e == E_MASK_HALF) {
-		single.components.e = E_MASK_SINGLE;
+	if (half.components.e == E_MASK_HALF) { /* NaN or infinity */
+		d.components.e = E_MASK_DOUBLE;
+		if (half.components.m == M_MASK_HALF) { /* Quiet NaN */
+			d.components.m = M_MASK_DOUBLE;
+		} else if (half.components.m != 0){ /* Signaling NaN */
+			d.components.m = (1ull << (M_BIT_DOUBLE - 1));
+		}
+	} else if (half.components.e == 0) { /* zero or subnormal */
+		if (half.components.m != 0) { /* subnormal */
+			/* find the leading 1 to nomalize */
+			uint64_t leading_shift = (uint64_t)
+				(M_BIT_HALF - fls(half.components.m) + 1);
+			d.components.m <<= leading_shift;
+			d.components.e = BIAS_DOUBLE - BIAS_HALF -
+				leading_shift + 1;
+		}
+	} else { /* normal */
+		d.components.e = BIAS_DOUBLE + (half.components.e - BIAS_HALF);
 	}
-	if (half.components.m == M_MASK_HALF) {
-		single.components.m = M_MASK_SINGLE;
-	}
 
-	return single.value;
+	d.components.m <<= exp;
+
+	return d.value;
 }
 
 bool ieee754_is_shrinkable_to_half(float value)
