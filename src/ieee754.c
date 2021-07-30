@@ -56,44 +56,28 @@ static int find_last_set_bit(unsigned int value)
 
 static bool is_over_range(unsigned int e, unsigned int f, unsigned int t)
 {
-	if (e > (f + t)) {
-		return true;
-	}
-	return false;
+	return e > (f + t);
 }
 
 static bool is_under_range(unsigned int e, unsigned int f, unsigned int t)
 {
-	if (e < (f - t + 1)) {
-		return true;
-	}
-	return false;
+	return e < (f - t + 1);
 }
 
 static bool is_in_range(unsigned int e, unsigned int f, unsigned int t)
 {
-	if (is_over_range(e, f, t) || is_under_range(e, f, t)) {
-		return false;
-	}
-	return true;
+	return !is_over_range(e, f, t) && !is_under_range(e, f, t);
 }
 
 static bool is_in_subrange(unsigned int e, unsigned int target_m_bits,
 		unsigned int f, unsigned int t)
 {
-	if (is_under_range(e, f, t) && (f - e - t) < target_m_bits) {
-		return true;
-	}
-	return false;
+	return is_under_range(e, f, t) && ((f - e - t) < target_m_bits);
 }
 
 static bool is_precision_lost(uint64_t m, unsigned int f, unsigned int t)
 {
-	if ((m & ((1ull << (f - t)) - 1)) != 0) {
-		return true;
-	}
-
-	return false;
+	return (m & ((1ull << (f - t)) - 1)) != 0;
 }
 
 uint16_t ieee754_convert_single_to_half(float value)
@@ -130,7 +114,6 @@ double ieee754_convert_half_to_double(uint16_t value)
 {
 	ieee754_half_t half = { .value = value };
 	ieee754_double_t d;
-	uint8_t exp = M_BIT_DOUBLE - M_BIT_HALF;
 
 	d.components.sign = half.components.sign;
 	d.components.e = half.components.e;
@@ -157,7 +140,7 @@ double ieee754_convert_half_to_double(uint16_t value)
 		d.components.e = BIAS_DOUBLE + (half.components.e - BIAS_HALF);
 	}
 
-	d.components.m <<= exp;
+	d.components.m <<= M_BIT_DOUBLE - M_BIT_HALF;
 
 	return d.value;
 }
