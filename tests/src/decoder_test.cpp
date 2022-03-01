@@ -6,6 +6,8 @@
 #include "cbor/decoder.h"
 #include "cbor/helper.h"
 #include <string.h>
+#include <math.h>
+#include <inttypes.h>
 
 typedef void (*check_func_t)(size_t size);
 

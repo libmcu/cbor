@@ -95,7 +95,7 @@ uint16_t ieee754_convert_single_to_half(float value)
 		single.components.m = 0;
 	} else if (is_under_range(single.components.e, BIAS_SINGLE, BIAS_HALF)) {
 		/* expand the exponent to the mantissa to make it subnormal */
-		exp += (uint8_t)((BIAS_SINGLE - single.components.e) - BIAS_HALF);
+		exp = (uint8_t)(exp + ((BIAS_SINGLE - single.components.e) - BIAS_HALF));
 		single.components.m = M_MASK_SINGLE;
 	} else { /* zero, normal */
 		if (single.components.e != 0) {
@@ -105,7 +105,7 @@ uint16_t ieee754_convert_single_to_half(float value)
 	}
 
 	/* precision may be lost discarding outrange lower bits */
-	half.components.m = (single.components.m >> exp) & M_MASK_HALF;
+	half.components.m = ((uint32_t)single.components.m >> exp) & M_MASK_HALF;
 
 	return half.value;
 }
@@ -137,7 +137,8 @@ double ieee754_convert_half_to_double(uint16_t value)
 				& E_MASK_DOUBLE;
 		}
 	} else { /* normal */
-		d.components.e = BIAS_DOUBLE + (half.components.e - BIAS_HALF);
+		d.components.e = (uint32_t)(BIAS_DOUBLE + (half.components.e
+					- BIAS_HALF)) & 0x7FFu/*11-bit*/;
 	}
 
 	d.components.m <<= M_BIT_DOUBLE - M_BIT_HALF;

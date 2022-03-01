@@ -12,11 +12,11 @@ cbor_error_t cbor_encode_unsigned_integer(cbor_writer_t *writer, uint64_t value)
 cbor_error_t cbor_encode_negative_integer(cbor_writer_t *writer, int64_t value);
 
 cbor_error_t cbor_encode_byte_string(cbor_writer_t *writer,
-		const uint8_t *data, size_t datasize);
+		uint8_t const *data, size_t datasize);
 cbor_error_t cbor_encode_byte_string_indefinite(cbor_writer_t *writer);
 
 cbor_error_t cbor_encode_text_string(cbor_writer_t *writer,
-		const char *text, size_t textsize);
+		char const *text, size_t textsize);
 cbor_error_t cbor_encode_text_string_indefinite(cbor_writer_t *writer);
 
 cbor_error_t cbor_encode_array(cbor_writer_t *writer, size_t length);

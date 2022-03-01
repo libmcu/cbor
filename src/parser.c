@@ -137,7 +137,7 @@ static cbor_error_t do_integer(struct parser_context *ctx)
 	item->size = (size_t)(ctx->following_bytes + !ctx->following_bytes);
 	item->offset = ctx->reader->msgidx;
 
-	ctx->reader->msgidx += ctx->following_bytes + 1;
+	ctx->reader->msgidx += (size_t)(ctx->following_bytes + 1);
 	ctx->itemidx++;
 
 	return CBOR_SUCCESS;

@@ -84,7 +84,7 @@ TEST(IEEE754, ShouldConvertToSingle_WhenSinglePrecisionDoubleValueGiven) {
 	d.components.sign = 0;
 	d.components.m = 0;
 	for (unsigned int i = 1023-127+1; i <= 1023+127; i++) {
-		d.components.e = i;
+		d.components.e = i & 0x7FFu;
 		LONGS_EQUAL(1, ieee754_is_shrinkable_to_single(d.value));
 	}
 

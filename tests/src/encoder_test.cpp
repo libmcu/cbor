@@ -2,6 +2,9 @@
 #include "CppUTest/TestHarness_c.h"
 #include "CppUTestExt/MockSupport.h"
 
+#include <math.h>
+#include <string.h>
+
 #include "cbor/encoder.h"
 
 TEST_GROUP(Encoder) {

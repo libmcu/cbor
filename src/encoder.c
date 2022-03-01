@@ -23,7 +23,7 @@ static uint8_t get_additional_info(uint64_t value)
 }
 
 static cbor_error_t encode_core(cbor_writer_t *writer, uint8_t major_type,
-		const uint8_t *data, uint64_t datasize, bool indefinite)
+		uint8_t const *data, uint64_t datasize, bool indefinite)
 {
 	uint8_t *buf = &writer->buf[writer->bufidx];
 	uint8_t additional_info = get_additional_info(datasize);
@@ -46,7 +46,7 @@ static cbor_error_t encode_core(cbor_writer_t *writer, uint8_t major_type,
 	}
 
 	buf[0] = (uint8_t)(major_type << MAJOR_TYPE_BIT) | additional_info;
-	cbor_copy(&buf[1], (const uint8_t *)&datasize, following_bytes);
+	cbor_copy(&buf[1], (uint8_t const *)&datasize, following_bytes);
 	if (data != NULL) {
 		cbor_copy_be(&buf[1 + following_bytes], data, (size_t)datasize);
 	}
@@ -72,7 +72,7 @@ cbor_error_t cbor_encode_negative_integer(cbor_writer_t *writer, int64_t value)
 }
 
 cbor_error_t cbor_encode_byte_string(cbor_writer_t *writer,
-		const uint8_t *data, size_t datasize)
+		uint8_t const *data, size_t datasize)
 {
 	return encode_core(writer, 2, data, datasize, false);
 }
@@ -83,10 +83,10 @@ cbor_error_t cbor_encode_byte_string_indefinite(cbor_writer_t *writer)
 }
 
 cbor_error_t cbor_encode_text_string(cbor_writer_t *writer,
-		const char *text, size_t textsize)
+		char const *text, size_t textsize)
 {
 	return encode_core(writer, 3,
-			(const uint8_t *)text, textsize, false);
+			(uint8_t const *)text, textsize, false);
 }
 
 cbor_error_t cbor_encode_text_string_indefinite(cbor_writer_t *writer)
@@ -126,7 +126,7 @@ cbor_error_t cbor_encode_simple(cbor_writer_t *writer, uint8_t value)
 
 cbor_error_t cbor_encode_bool(cbor_writer_t *writer, bool value)
 {
-	return encode_simple(writer, (uint8_t)value + 20);
+	return encode_simple(writer, (uint8_t)(value + 20));
 }
 
 cbor_error_t cbor_encode_null(cbor_writer_t *writer)
@@ -146,14 +146,14 @@ static cbor_error_t encode_float(cbor_writer_t *writer, float value)
 
 		writer->buf[writer->bufidx++] = 0xF9;
 		writer->bufidx += cbor_copy(&writer->buf[writer->bufidx],
-				(const uint8_t *)&half, sizeof(half));
+				(uint8_t const *)&half, sizeof(half));
 
 		return CBOR_SUCCESS;
 	}
 
 	writer->buf[writer->bufidx++] = 0xFA;
 	writer->bufidx += cbor_copy(&writer->buf[writer->bufidx],
-			(const uint8_t *)&value, sizeof(value));
+			(uint8_t const *)&value, sizeof(value));
 
 	return CBOR_SUCCESS;
 }
@@ -171,7 +171,7 @@ cbor_error_t cbor_encode_double(cbor_writer_t *writer, double value)
 
 	writer->buf[writer->bufidx++] = 0xFB;
 	writer->bufidx += cbor_copy(&writer->buf[writer->bufidx],
-			(const uint8_t *)&value, sizeof(value));
+			(uint8_t const *)&value, sizeof(value));
 
 	return CBOR_SUCCESS;
 }

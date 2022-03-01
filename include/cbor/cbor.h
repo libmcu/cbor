@@ -48,7 +48,7 @@ typedef struct {
 } cbor_item_t;
 
 typedef struct {
-	const uint8_t *msg;
+	uint8_t const *msg;
 	size_t msgsize;
 	size_t msgidx;
 } cbor_reader_t;
@@ -59,16 +59,17 @@ typedef struct {
 	size_t bufidx;
 } cbor_writer_t;
 
-void cbor_reader_init(cbor_reader_t *reader, const void *msg, size_t msgsize);
+void cbor_reader_init(cbor_reader_t *reader, void const *msg, size_t msgsize);
 void cbor_writer_init(cbor_writer_t *writer, void *buf, size_t bufsize);
+size_t cbor_writer_len(cbor_writer_t const *writer);
 
-cbor_item_data_t cbor_get_item_type(const cbor_item_t *item);
-size_t cbor_get_item_size(const cbor_item_t *item);
+cbor_item_data_t cbor_get_item_type(cbor_item_t const *item);
+size_t cbor_get_item_size(cbor_item_t const *item);
 
 uint8_t cbor_get_following_bytes(uint8_t additional_info);
 
-size_t cbor_copy(uint8_t *dst, const uint8_t *src, size_t len);
-size_t cbor_copy_be(uint8_t *dst, const uint8_t *src, size_t len);
+size_t cbor_copy(uint8_t *dst, uint8_t const *src, size_t len);
+size_t cbor_copy_be(uint8_t *dst, uint8_t const *src, size_t len);
 
 #if defined(__cplusplus)
 }
