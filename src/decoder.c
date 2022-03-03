@@ -5,18 +5,18 @@
 #define MIN(a, b)				(((a) > (b))? (b) : (a))
 #endif
 
-typedef cbor_error_t (*item_callback_t)(const cbor_item_t *item,
-		const uint8_t *msg, uint8_t *buf, size_t bufsize);
+typedef cbor_error_t (*item_callback_t)(cbor_item_t const *item,
+		uint8_t const *msg, uint8_t *buf, size_t bufsize);
 
-static cbor_error_t decode_pass(const cbor_item_t *item, const uint8_t *msg,
+static cbor_error_t decode_pass(cbor_item_t const *item, uint8_t const *msg,
 		uint8_t *buf, size_t bufsize);
-static cbor_error_t decode_integer(const cbor_item_t *item, const uint8_t *msg,
+static cbor_error_t decode_integer(cbor_item_t const *item, uint8_t const *msg,
 		uint8_t *buf, size_t bufsize);
-static cbor_error_t decode_string(const cbor_item_t *item, const uint8_t *msg,
+static cbor_error_t decode_string(cbor_item_t const *item, uint8_t const *msg,
 		uint8_t *buf, size_t bufsize);
-static cbor_error_t decode_float(const cbor_item_t *item, const uint8_t *msg,
+static cbor_error_t decode_float(cbor_item_t const *item, uint8_t const *msg,
 		uint8_t *buf, size_t bufsize);
-static cbor_error_t decode_simple(const cbor_item_t *item, const uint8_t *msg,
+static cbor_error_t decode_simple(cbor_item_t const *item, uint8_t const *msg,
 		uint8_t *buf, size_t bufsize);
 
 static const item_callback_t callbacks[] = {
@@ -44,13 +44,13 @@ static uint8_t get_simple_value(uint8_t val)
 	}
 }
 
-static bool is_break(const cbor_item_t *item)
+static bool is_break(cbor_item_t const *item)
 {
 	return item->type == CBOR_ITEM_FLOAT && item->size == 0xff;
 }
 
-static cbor_error_t decode_unsigned_integer(const cbor_item_t *item,
-		const uint8_t *msg, uint8_t *buf, size_t bufsize)
+static cbor_error_t decode_unsigned_integer(cbor_item_t const *item,
+		uint8_t const *msg, uint8_t *buf, size_t bufsize)
 {
 	uint8_t additional_info = get_cbor_additional_info(msg[item->offset]);
 	uint8_t following_bytes = cbor_get_following_bytes(additional_info);
@@ -65,8 +65,8 @@ static cbor_error_t decode_unsigned_integer(const cbor_item_t *item,
 	return CBOR_SUCCESS;
 }
 
-static cbor_error_t decode_negative_integer(const cbor_item_t *item,
-		const uint8_t *msg, uint8_t *buf, size_t bufsize)
+static cbor_error_t decode_negative_integer(cbor_item_t const *item,
+		uint8_t const *msg, uint8_t *buf, size_t bufsize)
 {
 	cbor_error_t err = decode_unsigned_integer(item, msg, buf, bufsize);
 
@@ -91,7 +91,7 @@ static cbor_error_t decode_negative_integer(const cbor_item_t *item,
 	return CBOR_SUCCESS;
 }
 
-static cbor_error_t decode_integer(const cbor_item_t *item, const uint8_t *msg,
+static cbor_error_t decode_integer(cbor_item_t const *item, uint8_t const *msg,
 		uint8_t *buf, size_t bufsize)
 {
 	switch (get_cbor_major_type(msg[item->offset])) {
@@ -104,7 +104,7 @@ static cbor_error_t decode_integer(const cbor_item_t *item, const uint8_t *msg,
 	}
 }
 
-static cbor_error_t decode_string(const cbor_item_t *item, const uint8_t *msg,
+static cbor_error_t decode_string(cbor_item_t const *item, uint8_t const *msg,
 		uint8_t *buf, size_t bufsize)
 {
 	for (size_t i = 0; i < item->size; i++) {
@@ -115,13 +115,13 @@ static cbor_error_t decode_string(const cbor_item_t *item, const uint8_t *msg,
 	return CBOR_SUCCESS;
 }
 
-static cbor_error_t decode_float(const cbor_item_t *item, const uint8_t *msg,
+static cbor_error_t decode_float(cbor_item_t const *item, uint8_t const *msg,
 		uint8_t *buf, size_t bufsize)
 {
 	return decode_unsigned_integer(item, msg, buf, bufsize);
 }
 
-static cbor_error_t decode_simple(const cbor_item_t *item, const uint8_t *msg,
+static cbor_error_t decode_simple(cbor_item_t const *item, uint8_t const *msg,
 		uint8_t *buf, size_t bufsize)
 {
 	cbor_error_t err = decode_unsigned_integer(item, msg, buf, bufsize);
@@ -131,7 +131,7 @@ static cbor_error_t decode_simple(const cbor_item_t *item, const uint8_t *msg,
 	return err;
 }
 
-static cbor_error_t decode_pass(const cbor_item_t *item, const uint8_t *msg,
+static cbor_error_t decode_pass(cbor_item_t const *item, uint8_t const *msg,
 		uint8_t *buf, size_t bufsize)
 {
 	(void)item;
@@ -141,7 +141,13 @@ static cbor_error_t decode_pass(const cbor_item_t *item, const uint8_t *msg,
 	return CBOR_SUCCESS;
 }
 
-cbor_error_t cbor_decode(cbor_reader_t *reader, const cbor_item_t *item,
+void const *cbor_decode_pointer(cbor_reader_t const *reader,
+		cbor_item_t const *item)
+{
+	return &reader->msg[item->offset];
+}
+
+cbor_error_t cbor_decode(cbor_reader_t const *reader, cbor_item_t const *item,
 		void *buf, size_t bufsize)
 {
 	if (is_break(item)) {
