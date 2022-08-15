@@ -1,5 +1,6 @@
 #include "cbor/encoder.h"
 #include "cbor/ieee754.h"
+#include <string.h>
 
 #define MAJOR_TYPE_BIT			5
 
@@ -82,11 +83,15 @@ cbor_error_t cbor_encode_byte_string_indefinite(cbor_writer_t *writer)
 	return encode_core(writer, 2, NULL, 0, true);
 }
 
-cbor_error_t cbor_encode_text_string(cbor_writer_t *writer,
-		char const *text, size_t textsize)
+cbor_error_t cbor_encode_text_string(cbor_writer_t *writer, char const *text)
 {
-	return encode_core(writer, 3,
-			(uint8_t const *)text, textsize, false);
+	size_t len = 0;
+
+	if (text != NULL) {
+		len = strnlen(text, writer->bufsize - writer->bufidx);
+	}
+
+	return encode_core(writer, 3, (uint8_t const *)text, len, false);
 }
 
 cbor_error_t cbor_encode_text_string_indefinite(cbor_writer_t *writer)
