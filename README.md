@@ -101,6 +101,7 @@ cbor_encode_map_indefinite(&writer);
   /* 2nd */
   cbor_encode_text_string(&writer, "age");
   cbor_encode_negative_integer(&writer, -1);
+cbor_encode_break(&writer);
 ```
 
 ## Limitation
