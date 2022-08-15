@@ -62,6 +62,7 @@ typedef struct {
 void cbor_reader_init(cbor_reader_t *reader, void const *msg, size_t msgsize);
 void cbor_writer_init(cbor_writer_t *writer, void *buf, size_t bufsize);
 size_t cbor_writer_len(cbor_writer_t const *writer);
+uint8_t const *cbor_writer_get_encoded(cbor_writer_t const *writer);
 
 cbor_item_data_t cbor_get_item_type(cbor_item_t const *item);
 size_t cbor_get_item_size(cbor_item_t const *item);

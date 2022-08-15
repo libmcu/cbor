@@ -83,3 +83,8 @@ size_t cbor_writer_len(cbor_writer_t const *writer)
 {
 	return writer->bufidx;
 }
+
+uint8_t const *cbor_writer_get_encoded(cbor_writer_t const *writer)
+{
+	return (uint8_t const *)writer->buf;
+}
