@@ -94,13 +94,14 @@ cbor_writer_t writer;
 
 cbor_writer_init(&reader, buf, sizeof(buf));
 
-cbor_encode_map(&writer, 2);
+cbor_encode_map_indefinite(&writer);
   /* 1st */
-  cbor_encode_text_string(&writer, "key", 3);
-  cbor_encode_text_string(&writer, "value", 5);
+  cbor_encode_text_string(&writer, "key");
+  cbor_encode_text_string(&writer, "value");
   /* 2nd */
-  cbor_encode_text_string(&writer, "age", 1);
+  cbor_encode_text_string(&writer, "age");
   cbor_encode_negative_integer(&writer, -1);
+cbor_encode_break(&writer);
 ```
 
 ## Limitation

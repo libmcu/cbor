@@ -82,18 +82,6 @@ cbor_error_t cbor_encode_byte_string_indefinite(cbor_writer_t *writer)
 	return encode_core(writer, 2, NULL, 0, true);
 }
 
-cbor_error_t cbor_encode_text_string(cbor_writer_t *writer,
-		char const *text, size_t textsize)
-{
-	return encode_core(writer, 3,
-			(uint8_t const *)text, textsize, false);
-}
-
-cbor_error_t cbor_encode_text_string_indefinite(cbor_writer_t *writer)
-{
-	return encode_core(writer, 3, NULL, 0, true);
-}
-
 cbor_error_t cbor_encode_array(cbor_writer_t *writer, size_t length)
 {
 	return encode_core(writer, 4, NULL, length, false);
@@ -174,4 +162,25 @@ cbor_error_t cbor_encode_double(cbor_writer_t *writer, double value)
 			(uint8_t const *)&value, sizeof(value));
 
 	return CBOR_SUCCESS;
+}
+
+cbor_error_t cbor_encode_text_string_indefinite(cbor_writer_t *writer)
+{
+	return encode_core(writer, 3, NULL, 0, true);
+}
+
+#if !defined(_POSIX_C_SOURCE)
+#define _POSIX_C_SOURCE 200809L
+#endif
+#include <string.h>
+
+cbor_error_t cbor_encode_text_string(cbor_writer_t *writer, char const *text)
+{
+	size_t len = 0;
+
+	if (text != NULL) {
+		len = (size_t)strnlen(text, writer->bufsize - writer->bufidx);
+	}
+
+	return encode_core(writer, 3, (uint8_t const *)text, len, false);
 }
