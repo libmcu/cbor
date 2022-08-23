@@ -24,7 +24,7 @@ struct parser_context {
 
 };
 
-typedef cbor_error_t (*major_type_callback_t)(struct parser_context *ctx);
+typedef cbor_error_t (*type_parser_t)(struct parser_context *ctx);
 
 static cbor_error_t do_integer(struct parser_context *ctx);
 static cbor_error_t do_string(struct parser_context *ctx);
@@ -32,8 +32,8 @@ static cbor_error_t do_recursive(struct parser_context *ctx);
 static cbor_error_t do_tag(struct parser_context *ctx);
 static cbor_error_t do_float_and_other(struct parser_context *ctx);
 
-/* 8 callbacks for 3-bit major type */
-static const major_type_callback_t callbacks[] = {
+/* 8 parsers for 3-bit major type */
+static const type_parser_t parsers[] = {
 	do_integer,		/* 0: unsigned integer */
 	do_integer,		/* 1: negative integer */
 	do_string,		/* 2: byte string */
@@ -43,7 +43,6 @@ static const major_type_callback_t callbacks[] = {
 	do_tag,			/* 6: tag */
 	do_float_and_other,	/* 7: float, simple value, and break */
 };
-_Static_assert(sizeof(callbacks) == 8 * sizeof(major_type_callback_t), "");
 
 static bool has_valid_following_bytes(const struct parser_context *ctx,
 		cbor_error_t *err)
@@ -106,7 +105,7 @@ static cbor_error_t parse(struct parser_context *ctx, size_t maxitems)
 			break;
 		}
 
-		err = callbacks[ctx->major_type](ctx);
+		err = parsers[ctx->major_type](ctx);
 
 		if (err == CBOR_BREAK) {
 			if (ctx->reader->msgidx == ctx->reader->msgsize) {

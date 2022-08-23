@@ -1,4 +1,35 @@
 #include "cbor/helper.h"
+#include "cbor/decoder.h"
+
+size_t cbor_iterate(cbor_reader_t const *reader,
+		    cbor_item_t const *items, size_t nr_items,
+		    cbor_item_t const *parent,
+		    void (*callback_each)(cbor_reader_t const *reader,
+			    cbor_item_t const *item, cbor_item_t const *parent,
+			    void *udt),
+		    void *udt)
+{
+	size_t offset = 0;
+	size_t i = 0;
+
+	for (i = 0; i < nr_items; i++) {
+		cbor_item_t const *item = &items[i+offset];
+
+		if (item->type == CBOR_ITEM_MAP || item->type == CBOR_ITEM_ARRAY) {
+			size_t len = item->type == CBOR_ITEM_MAP? item->size*2 : item->size;
+			offset += cbor_iterate(reader, item+1, len, item, callback_each, udt);
+			continue;
+		}
+
+		if (cbor_decode(reader, item, 0, 0) == CBOR_BREAK) {
+			break;
+		}
+
+		(*callback_each)(reader, item, parent, udt);
+	}
+
+	return i + offset;
+}
 
 const char *cbor_stringify_error(cbor_error_t err)
 {
