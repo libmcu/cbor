@@ -75,7 +75,8 @@ static cbor_error_t decode_negative_integer(cbor_item_t const *item,
 	}
 
 	uint64_t val = 0;
-	cbor_copy_be((uint8_t *)&val, buf, item->size);
+	size_t len = item->size? item->size : 1;
+	cbor_copy_be((uint8_t *)&val, buf, len);
 
 	val = ~val;
 
@@ -86,7 +87,7 @@ static cbor_error_t decode_negative_integer(cbor_item_t const *item,
 		buf[i] = 0xff;
 	}
 
-	cbor_copy_be(buf, (uint8_t *)&val, item->size);
+	cbor_copy_be(buf, (uint8_t *)&val, len);
 
 	return CBOR_SUCCESS;
 }
@@ -153,7 +154,7 @@ cbor_error_t cbor_decode(cbor_reader_t const *reader, cbor_item_t const *item,
 	if (is_break(item)) {
 		return CBOR_BREAK;
 	}
-	if (item->size > bufsize) {
+	if (item->size > bufsize || bufsize == 0 || buf == NULL) {
 		return CBOR_OVERRUN;
 	}
 
