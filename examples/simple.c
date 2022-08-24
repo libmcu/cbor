@@ -61,8 +61,8 @@ static void decode_simple_data(void const *data, size_t datasize, example_writer
 	cbor_item_t items[16];
 	size_t n;
 
-	cbor_reader_init(&reader, data, datasize);
-	cbor_parse(&reader, items, sizeof(items) / sizeof(items[0]), &n);
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(items[0]));
+	cbor_parse(&reader, data, datasize, &n);
 
 	for (size_t i = 0; i < n; i++) {
 		print_cbor(&reader, &items[i], print);
