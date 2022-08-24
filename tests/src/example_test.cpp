@@ -5,15 +5,42 @@
 #include "example.h"
 #include "cbor/encoder.h"
 
+class StringComparator : public MockNamedValueComparator
+{
+public:
+	virtual bool isEqual(const void *object1, const void *object2)
+	{
+		if (strcmp((const char *)object1, (const char *)object2) != 0) {
+			return false;
+		}
+
+		return true;
+	}
+	virtual SimpleString valueToString(const void* object)
+	{
+		return StringFrom(object);
+	}
+};
+
+static void print(void const *data, size_t datasize)
+{
+	mock().actualCall(__func__)
+		.withParameterOfType("stringType", "data", data)
+		.withParameter("datasize", datasize);
+}
+
 TEST_GROUP(Example) {
 	cbor_writer_t writer;
 	uint8_t writer_buffer[1024];
 
 	void setup(void) {
+		static StringComparator StrComparator;
+		mock().installComparator("stringType", StrComparator);
 		cbor_writer_init(&writer, writer_buffer, sizeof(writer_buffer));
 	}
 	void teardown(void) {
 		mock().checkExpectations();
+		mock().removeAllComparatorsAndCopiers();
 		mock().clear();
 	}
 };
@@ -97,4 +124,18 @@ TEST(Example, ShouldConvertToUserDefinedDataType2) {
 
 	LONGS_EQUAL(1, udt.type);
 	MEMCMP_EQUAL(uuid, udt.uuid, sizeof(uuid));
+}
+
+TEST(Example, ShouldPrintString_WhenSimpleExampleCalled) {
+	mock().expectOneCall("print")
+		.withParameterOfType("stringType", "data", "Hello, World!")
+		.withParameter("datasize", 13);
+	mock().expectOneCall("print")
+		.withParameterOfType("stringType", "data", "1661225893")
+		.withParameter("datasize", 10);
+	mock().expectOneCall("print")
+		.withParameterOfType("stringType", "data", "true")
+		.withParameter("datasize", 4);
+
+	simple_example(print);
 }

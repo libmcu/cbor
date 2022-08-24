@@ -1,6 +1,7 @@
 COMPONENT_NAME = example
 
 SRC_FILES = \
+	../examples/simple.c \
 	../examples/complex.c \
 	../src/encoder.c \
 	../src/ieee754.c \

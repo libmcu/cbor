@@ -153,6 +153,8 @@ static void convert(cbor_reader_t const *reader, cbor_item_t const *item,
 	          cbor_encode_float(&writer, 0.f);
 	  cbor_encode_break(&writer);
 	cbor_encode_break(&writer);
+
+   See the test case: tests/src/example_test.cpp
  */
 void complex_example(void const *data, size_t datasize, void *udt)
 {
