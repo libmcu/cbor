@@ -33,10 +33,6 @@ OD := $(CROSS_COMPILE_PREFIX)objdump
 NM := $(CROSS_COMPILE_PREFIX)nm
 
 CFLAGS := \
-	-mcpu=cortex-m0 \
-	-mthumb \
-	-mabi=aapcs \
-	\
 	-std=c99 \
 	-static \
 	-ffreestanding \
@@ -79,8 +75,20 @@ CFLAGS := \
 	\
 	-Wno-error=pedantic
 
+ifneq ($(CROSS_COMPILE),)
+CFLAGS += \
+	-mcpu=cortex-m0 \
+	-mthumb \
+	-mabi=aapcs
+endif
+
+VERSION ?= $(shell git describe --long --tags --dirty --always)
+version-list := $(subst -, , $(VERSION))
+VERSION_TAG := $(strip $(word 1, $(version-list)))
+
 all: $(OBJS)
 	$(Q)$(SZ) -t --common $(sort $(OBJS))
+	@echo $(VERSION_TAG) > $(BUILDIR)/version.txt
 
 $(BUILDIR)/%.o: %.c $(MAKEFILE_LIST)
 	$(info compiling   $<)

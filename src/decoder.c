@@ -5,7 +5,7 @@
 #define MIN(a, b)				(((a) > (b))? (b) : (a))
 #endif
 
-typedef cbor_error_t (*item_callback_t)(cbor_item_t const *item,
+typedef cbor_error_t (*item_decoder_t)(cbor_item_t const *item,
 		uint8_t const *msg, uint8_t *buf, size_t bufsize);
 
 static cbor_error_t decode_pass(cbor_item_t const *item, uint8_t const *msg,
@@ -19,7 +19,7 @@ static cbor_error_t decode_float(cbor_item_t const *item, uint8_t const *msg,
 static cbor_error_t decode_simple(cbor_item_t const *item, uint8_t const *msg,
 		uint8_t *buf, size_t bufsize);
 
-static const item_callback_t callbacks[] = {
+static const item_decoder_t decoders[] = {
 	decode_pass,		/* 0: CBOR_ITEM_UNKNOWN */
 	decode_integer,		/* 1: CBOR_ITEM_INTEGER */
 	decode_string,		/* 2: CBOR_ITEM_STRING */
@@ -158,5 +158,5 @@ cbor_error_t cbor_decode(cbor_reader_t const *reader, cbor_item_t const *item,
 		return CBOR_OVERRUN;
 	}
 
-	return callbacks[item->type](item, reader->msg, (uint8_t *)buf, bufsize);
+	return decoders[item->type](item, reader->msg, (uint8_t *)buf, bufsize);
 }
