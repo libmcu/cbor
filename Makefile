@@ -82,8 +82,13 @@ CFLAGS += \
 	-mabi=aapcs
 endif
 
+VERSION ?= $(shell git describe --long --tags --dirty --always)
+version-list := $(subst -, , $(VERSION))
+VERSION_TAG := $(strip $(word 1, $(version-list))).$(word 2, $(version-list))
+
 all: $(OBJS)
 	$(Q)$(SZ) -t --common $(sort $(OBJS))
+	@echo $(VERSION_TAG) > $(BUILDIR)/version.txt
 
 $(BUILDIR)/%.o: %.c $(MAKEFILE_LIST)
 	$(info compiling   $<)
