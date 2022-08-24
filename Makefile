@@ -33,10 +33,6 @@ OD := $(CROSS_COMPILE_PREFIX)objdump
 NM := $(CROSS_COMPILE_PREFIX)nm
 
 CFLAGS := \
-	-mcpu=cortex-m0 \
-	-mthumb \
-	-mabi=aapcs \
-	\
 	-std=c99 \
 	-static \
 	-ffreestanding \
@@ -78,6 +74,13 @@ CFLAGS := \
 	-Wpedantic \
 	\
 	-Wno-error=pedantic
+
+ifneq ($(CROSS_COMPILE),)
+CFLAGS += \
+	-mcpu=cortex-m0 \
+	-mthumb \
+	-mabi=aapcs
+endif
 
 all: $(OBJS)
 	$(Q)$(SZ) -t --common $(sort $(OBJS))
