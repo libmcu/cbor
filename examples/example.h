@@ -28,9 +28,9 @@ struct udt {
 	} data;
 };
 
-typedef void (*example_writer)(void const *data, size_t datasize);
+typedef void (*example_printer_t)(void const *data, size_t datasize);
 
-void simple_example(example_writer print);
+void simple_example(example_printer_t print);
 void complex_example(void const *data, size_t datasize, void *udt);
 
 #if defined(__cplusplus)
