@@ -59,20 +59,19 @@ size_t cbor_get_item_size(cbor_item_t const *item)
 	return item->size;
 }
 
-void cbor_reader_init(cbor_reader_t *reader, void const *msg, size_t msgsize)
+void cbor_reader_init(cbor_reader_t *reader, cbor_item_t *items, size_t maxitems)
 {
-	assert(parser != NULL);
-	assert(msg != NULL);
+	assert(reader != NULL);
 
-	reader->msg = (uint8_t const *)msg;
-	reader->msgsize = msgsize;
-	reader->msgidx = 0;
+	reader->items = items;
+	reader->maxitems = maxitems;
+	reader->itemidx = 0;
 }
 
 void cbor_writer_init(cbor_writer_t *writer, void *buf, size_t bufsize)
 {
-	assert(parser != NULL);
-	assert(msg != NULL);
+	assert(writer != NULL);
+	assert(buf != NULL);
 
 	writer->buf = (uint8_t *)buf;
 	writer->bufsize = bufsize;

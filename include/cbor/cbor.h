@@ -51,6 +51,10 @@ typedef struct {
 	uint8_t const *msg;
 	size_t msgsize;
 	size_t msgidx;
+
+	cbor_item_t *items;
+	size_t itemidx;
+	size_t maxitems;
 } cbor_reader_t;
 
 typedef struct {
@@ -59,7 +63,14 @@ typedef struct {
 	size_t bufidx;
 } cbor_writer_t;
 
-void cbor_reader_init(cbor_reader_t *reader, void const *msg, size_t msgsize);
+/**
+ * Initialize the reader for CBOR encoded messages.
+ *
+ * @param[in,out] reader reader context for the actual encoded message
+ * @param[out] items a pointer to item buffers
+ * @param[in] maxitems the maximum number of items to be stored in @p items
+ */
+void cbor_reader_init(cbor_reader_t *reader, cbor_item_t *items, size_t maxitems);
 void cbor_writer_init(cbor_writer_t *writer, void *buf, size_t bufsize);
 size_t cbor_writer_len(cbor_writer_t const *writer);
 uint8_t const *cbor_writer_get_encoded(cbor_writer_t const *writer);

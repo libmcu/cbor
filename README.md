@@ -61,8 +61,8 @@ cbor_reader_t reader;
 cbor_item_t items[MAX_ITEMS];
 size_t n;
 
-cbor_reader_init(&reader, cbor_message, sizeof(cbor_message));
-cbor_parse(&reader, items, MAX_ITEMS, &n);
+cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+cbor_parse(&reader, cbor_message, cbor_message_len, &n);
 
 for (i = 0; i < n; i++) {
 	printf("item: %s, size: %zu\n",

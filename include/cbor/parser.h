@@ -11,14 +11,14 @@ extern "C" {
  * Parse the encoded CBOR messages into items.
  *
  * @param[in,out] reader reader context for the actual encoded message
- * @param[out] items a pointer to item buffers
- * @param[in] maxitems the maximum number of items to be stored in @p items
+ * @param[in] msg CBOR encoded message
+ * @param[in] msgsize the @p msg size in bytes
  * @param[out] nitems_parsed the number of items parsed gets stored if not null
  *
  * @return a code of @ref cbor_error_t
  */
-cbor_error_t cbor_parse(cbor_reader_t *reader,
-		cbor_item_t *items, size_t maxitems, size_t *nitems_parsed);
+cbor_error_t cbor_parse(cbor_reader_t *reader, void const *msg, size_t msgsize,
+		size_t *nitems_parsed);
 
 #if defined(__cplusplus)
 }

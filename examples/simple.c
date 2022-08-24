@@ -20,7 +20,7 @@ union cbor_value {
 	uint8_t str_copy[16];
 };
 
-static void print_cbor(cbor_reader_t const *reader, cbor_item_t const *item, example_writer print)
+static void print_cbor(cbor_reader_t const *reader, cbor_item_t const *item, example_printer_t print)
 {
 	union cbor_value val;
 
@@ -55,21 +55,21 @@ static size_t encode_simple_data(void *buf, size_t bufsize)
 	return cbor_writer_len(&writer);
 }
 
-static void decode_simple_data(void const *data, size_t datasize, example_writer print)
+static void decode_simple_data(void const *data, size_t datasize, example_printer_t print)
 {
 	cbor_reader_t reader;
 	cbor_item_t items[16];
 	size_t n;
 
-	cbor_reader_init(&reader, data, datasize);
-	cbor_parse(&reader, items, sizeof(items) / sizeof(items[0]), &n);
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(items[0]));
+	cbor_parse(&reader, data, datasize, &n);
 
 	for (size_t i = 0; i < n; i++) {
 		print_cbor(&reader, &items[i], print);
 	}
 }
 
-void simple_example(example_writer print)
+void simple_example(example_printer_t print)
 {
 	uint8_t buf[32];
 	size_t len = encode_simple_data(buf, sizeof(buf));
