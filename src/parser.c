@@ -134,7 +134,7 @@ static cbor_error_t do_integer(struct parser_context *ctx)
 
 	cbor_item_t *item = &ctx->items[ctx->itemidx];
 	item->type = CBOR_ITEM_INTEGER;
-	item->size = (size_t)(ctx->following_bytes + !ctx->following_bytes);
+	item->size = (size_t)ctx->following_bytes;
 	item->offset = ctx->reader->msgidx;
 
 	ctx->reader->msgidx += (size_t)(ctx->following_bytes + 1);
@@ -198,7 +198,7 @@ static cbor_error_t do_float_and_other(struct parser_context *ctx)
 	cbor_error_t err = CBOR_SUCCESS;
 
 	item->type = CBOR_ITEM_FLOAT;
-	item->size = (size_t)ctx->following_bytes + !ctx->following_bytes;
+	item->size = (size_t)ctx->following_bytes;
 	item->offset = ctx->reader->msgidx;
 
 	if (ctx->following_bytes == (uint8_t)CBOR_INDEFINITE_VALUE) {

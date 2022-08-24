@@ -8,7 +8,7 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
-#if !defined(CBOR_RECURSION_DEPTH)
+#if !defined(CBOR_RECURSION_MAX_LEVEL)
 #define CBOR_RECURSION_MAX_LEVEL			4
 #endif
 

@@ -65,7 +65,7 @@ TEST(Decoder, ShouldDecodeUnsignedInteger_WhenEncodedGiven) {
 		cbor_reader_init(&reader, &m[i], sizeof(m[i]));
 		LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, &item, 1, &n));
 		LONGS_EQUAL(1, n);
-		LONGS_EQUAL(1, item.size);
+		LONGS_EQUAL(0, item.size);
 		LONGS_EQUAL(0, item.offset);
 		uint8_t v;
 		LONGS_EQUAL(CBOR_SUCCESS,
@@ -241,7 +241,7 @@ TEST(Decoder, ShouldDecodeTextString_WhenWrappedInArray) {
 	LONGS_EQUAL(4, items[0].size); // array
 	LONGS_EQUAL(1, items[1].size); // text
 	LONGS_EQUAL(1, items[2].size); // text
-	LONGS_EQUAL(1, items[3].size); // unsigned
+	LONGS_EQUAL(0, items[3].size); // unsigned
 	LONGS_EQUAL(4, items[4].size); // text
 
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &items[0], buf, sizeof(buf)));
@@ -289,7 +289,7 @@ TEST(Decoder, ShouldDecodeArray_WhenSingleLevelWithDiffentTypeValueGiven) {
 	LONGS_EQUAL(4, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 3);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_string").withParameter("size", 3);
 
 	for (size_t i = 0; i < n; i++) {
@@ -305,11 +305,11 @@ TEST(Decoder, ShouldDecodeArray_WhenMultiLevelArrayGiven) {
 	LONGS_EQUAL(8, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 3);
-	mock().expectOneCall("f_integer").withParameter("size", 1);
+	mock().expectOneCall("f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_array").withParameter("size", 2);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_array").withParameter("size", 2);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
@@ -317,7 +317,7 @@ TEST(Decoder, ShouldDecodeArray_WhenMultiLevelArrayGiven) {
 }
 TEST(Decoder, ShouldDecodeArray_WhenOneByteLengthGiven) {
 	// [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
-	uint8_t m[] = { 0x98,0x19,0x01,0x02,0x03,0x04,0x05,0x06, 0x07,0x08,0x09,
+	uint8_t m[] = { 0x98,0x19,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,
 		0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,0x10,0x11,0x12,0x13,0x14,0x15,
 		0x16,0x17,0x18,0x18,0x18,0x19 };
 	size_t n;
@@ -327,7 +327,8 @@ TEST(Decoder, ShouldDecodeArray_WhenOneByteLengthGiven) {
 	LONGS_EQUAL(26, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 25);
-	mock().expectNCalls(25, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(23, "f_integer").withParameter("size", 0);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
@@ -343,7 +344,7 @@ TEST(Decoder, ShouldDecodeMap_WhenSingleLevelArrayGiven) {
 	LONGS_EQUAL(5, n);
 
 	mock().expectOneCall("f_map").withParameter("size", 2);
-	mock().expectNCalls(4, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(4, "f_integer").withParameter("size", 0);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
@@ -385,10 +386,10 @@ TEST(Decoder, ShouldDecodeMap_WhenArrayValueGiven) {
 
 	mock().expectOneCall("f_map").withParameter("size", 2);
 	mock().expectOneCall("f_string").withParameter("size", 1);
-	mock().expectOneCall("f_integer").withParameter("size", 1);
+	mock().expectOneCall("f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_string").withParameter("size", 1);
 	mock().expectOneCall("f_array").withParameter("size", 2);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
@@ -505,11 +506,11 @@ TEST(Decoder, ShouldDecodeArray_WhenMultiLevelIndefiniteArrarGiven) {
 	LONGS_EQUAL(10, n);
 
 	mock().expectOneCall("f_array").withParameter("size", (size_t)-1);
-	mock().expectOneCall("f_integer").withParameter("size", 1);
+	mock().expectOneCall("f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_array").withParameter("size", 2);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_array").withParameter("size", (size_t)-1);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_float").withParameter("size", 0xff);
 	mock().expectOneCall("f_float").withParameter("size", 0xff);
 
@@ -527,11 +528,11 @@ TEST(Decoder, ShouldDecodeArray_WhenMultiLevelIndefiniteArrarGiven2) {
 	LONGS_EQUAL(9, n);
 
 	mock().expectOneCall("f_array").withParameter("size", (size_t)-1);
-	mock().expectOneCall("f_integer").withParameter("size", 1);
+	mock().expectOneCall("f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_array").withParameter("size", 2);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_array").withParameter("size", 2);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_float").withParameter("size", 0xff);
 
 	for (size_t i = 0; i < n; i++) {
@@ -548,11 +549,11 @@ TEST(Decoder, ShouldDecodeArray_WhenMultiLevelIndefiniteArrarGiven3) {
 	LONGS_EQUAL(9, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 3);
-	mock().expectOneCall("f_integer").withParameter("size", 1);
+	mock().expectOneCall("f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_array").withParameter("size", 2);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_array").withParameter("size", (size_t)-1);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_float").withParameter("size", 0xff);
 
 	for (size_t i = 0; i < n; i++) {
@@ -569,12 +570,12 @@ TEST(Decoder, ShouldDecodeArray_WhenMultiLevelIndefiniteArrarGiven4) {
 	LONGS_EQUAL(9, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 3);
-	mock().expectOneCall("f_integer").withParameter("size", 1);
+	mock().expectOneCall("f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_array").withParameter("size", (size_t)-1);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_float").withParameter("size", 0xff);
 	mock().expectOneCall("f_array").withParameter("size", 2);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
@@ -592,7 +593,8 @@ TEST(Decoder, ShouldDecodeArray_WhenInfiniteLengthGiven) {
 	LONGS_EQUAL(27, n);
 
 	mock().expectOneCall("f_array").withParameter("size", (size_t)-1);
-	mock().expectNCalls(25, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(23, "f_integer").withParameter("size", 0);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
 	mock().expectOneCall("f_float").withParameter("size", 0xff);
 
 	for (size_t i = 0; i < n; i++) {
@@ -610,10 +612,10 @@ TEST(Decoder, ShouldDecodeMap_WhenMultiInfiniteLengthGiven) {
 
 	mock().expectOneCall("f_map").withParameter("size", (size_t)-1);
 	mock().expectOneCall("f_string").withParameter("size", 1);
-	mock().expectOneCall("f_integer").withParameter("size", 1);
+	mock().expectOneCall("f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_string").withParameter("size", 1);
 	mock().expectOneCall("f_array").withParameter("size", (size_t)-1);
-	mock().expectNCalls(2, "f_integer").withParameter("size", 1);
+	mock().expectNCalls(2, "f_integer").withParameter("size", 0);
 	mock().expectOneCall("f_float").withParameter("size", 0xff);
 	mock().expectOneCall("f_float").withParameter("size", 0xff);
 
@@ -742,7 +744,7 @@ TEST(Decoder, ShouldDecodeFalse) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
-	mock().expectOneCall("f_simple").withParameter("size", 1);
+	mock().expectOneCall("f_simple").withParameter("size", 0);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
@@ -760,7 +762,7 @@ TEST(Decoder, ShouldDecodeTrue) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
-	mock().expectOneCall("f_simple").withParameter("size", 1);
+	mock().expectOneCall("f_simple").withParameter("size", 0);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
@@ -778,7 +780,7 @@ TEST(Decoder, ShouldDecodeNull) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
-	mock().expectOneCall("f_simple").withParameter("size", 1);
+	mock().expectOneCall("f_simple").withParameter("size", 0);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
@@ -796,7 +798,7 @@ TEST(Decoder, ShouldDecodeSimpleValue) {
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, items, sizeof(items)/sizeof(items[0]), &n));
 	LONGS_EQUAL(1, n);
 
-	mock().expectOneCall("f_simple").withParameter("size", 1);
+	mock().expectOneCall("f_simple").withParameter("size", 0);
 
 	for (size_t i = 0; i < n; i++) {
 		check_item_type[items[i].type](items[i].size);
