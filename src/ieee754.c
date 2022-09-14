@@ -1,4 +1,10 @@
 /*
+ * SPDX-FileCopyrightText: 2021 Kyunghwan Kwon <k@mononn.com>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+/*
  * | precision | sign | exponent | mantissa | bias |   exp range  |
  * | --------- | ---- | -------- | -------- | ---- | ------------ |
  * | half      | 1    |  5       | 10       |   15 |   -14 ~   15 |
