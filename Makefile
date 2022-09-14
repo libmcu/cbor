@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 PROJECT := mycbor
 BASEDIR := $(shell pwd)
 BUILDIR := build

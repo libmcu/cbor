@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 list(APPEND CBOR_SRCS
 	${CBOR_ROOT}/src/common.c
 	${CBOR_ROOT}/src/parser.c

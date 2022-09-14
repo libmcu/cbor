@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 ifneq ($(CBOR_ROOT),)
 cbor-basedir := $(CBOR_ROOT)/
 endif
