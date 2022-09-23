@@ -5,9 +5,14 @@
  */
 
 #include "cbor/encoder.h"
+#include <string.h>
 #include "cbor/ieee754.h"
 
 #define MAJOR_TYPE_BIT			5
+
+#if !defined(MIN)
+#define MIN(a, b)			(((a) > (b))? (b) : (a))
+#endif
 
 static uint8_t get_additional_info(uint64_t value)
 {
@@ -86,6 +91,26 @@ cbor_error_t cbor_encode_byte_string(cbor_writer_t *writer,
 cbor_error_t cbor_encode_byte_string_indefinite(cbor_writer_t *writer)
 {
 	return encode_core(writer, 2, NULL, 0, true);
+}
+
+
+cbor_error_t cbor_encode_text_string(cbor_writer_t *writer,
+		char const *text, size_t textsize)
+{
+	return encode_core(writer, 3,
+			(uint8_t const *)text, textsize, false);
+}
+
+cbor_error_t cbor_encode_null_terminated_text_string(cbor_writer_t *writer,
+		char const *text)
+{
+	size_t len = 0;
+
+	if (text != NULL) {
+		len = MIN(strlen(text), writer->bufsize - writer->bufidx);
+	}
+
+	return encode_core(writer, 3, (uint8_t const *)text, len, false);
 }
 
 cbor_error_t cbor_encode_array(cbor_writer_t *writer, size_t length)
@@ -173,20 +198,4 @@ cbor_error_t cbor_encode_double(cbor_writer_t *writer, double value)
 cbor_error_t cbor_encode_text_string_indefinite(cbor_writer_t *writer)
 {
 	return encode_core(writer, 3, NULL, 0, true);
-}
-
-#if !defined(_POSIX_C_SOURCE)
-#define _POSIX_C_SOURCE 200809L
-#endif
-#include <string.h>
-
-cbor_error_t cbor_encode_text_string(cbor_writer_t *writer, char const *text)
-{
-	size_t len = 0;
-
-	if (text != NULL) {
-		len = (size_t)strnlen(text, writer->bufsize - writer->bufidx);
-	}
-
-	return encode_core(writer, 3, (uint8_t const *)text, len, false);
 }

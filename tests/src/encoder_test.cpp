@@ -139,8 +139,8 @@ TEST(Encoder, WhenTwoByteLengthByteStringGiven) {
 
 TEST(Encoder, WhenIndefiniteTextStringGiven) {
 	cbor_encode_text_string_indefinite(&writer);
-	cbor_encode_text_string(&writer, "strea");
-	cbor_encode_text_string(&writer, "ming");
+	cbor_encode_text_string(&writer, "strea", 5);
+	cbor_encode_text_string(&writer, "ming", 4);
 	LONGS_EQUAL(12, writer.bufidx);
 	LONGS_EQUAL(0x7F, writer.buf[0]);
 	LONGS_EQUAL(0x65, writer.buf[1]);
@@ -258,20 +258,20 @@ TEST(Encoder, WhenEncodedLengthMapGiven3) {
 		0x44,0x61,0x65,0x61,0x45 };
 	cbor_encode_map(&writer, 5);
 	  // 1st item
-	  cbor_encode_text_string(&writer, "a");
-	  cbor_encode_text_string(&writer, "A");
+	  cbor_encode_text_string(&writer, "a", 1);
+	  cbor_encode_text_string(&writer, "A", 1);
 	  // 2nd
-	  cbor_encode_text_string(&writer, "b");
-	  cbor_encode_text_string(&writer, "B");
+	  cbor_encode_text_string(&writer, "b", 1);
+	  cbor_encode_text_string(&writer, "B", 1);
 	  // 3
-	  cbor_encode_text_string(&writer, "c");
-	  cbor_encode_text_string(&writer, "C");
+	  cbor_encode_text_string(&writer, "c", 1);
+	  cbor_encode_text_string(&writer, "C", 1);
 	  // 4
-	  cbor_encode_text_string(&writer, "d");
-	  cbor_encode_text_string(&writer, "D");
+	  cbor_encode_text_string(&writer, "d", 1);
+	  cbor_encode_text_string(&writer, "D", 1);
 	  // 5
-	  cbor_encode_text_string(&writer, "e");
-	  cbor_encode_text_string(&writer, "E");
+	  cbor_encode_text_string(&writer, "e", 1);
+	  cbor_encode_text_string(&writer, "E", 1);
 	LONGS_EQUAL(21, writer.bufidx);
 	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
 }
@@ -280,9 +280,9 @@ TEST(Encoder, WhenIndefiniteLengthMapGiven) {
 	const uint8_t expected[] = { 0xbf,0x61,0x61,0x01,0x61,0x62,0x9f,0x02,
 		0x03,0xff,0xff };
 	cbor_encode_map_indefinite(&writer);
-	  cbor_encode_text_string(&writer, "a");
+	  cbor_encode_text_string(&writer, "a", 1);
 	  cbor_encode_unsigned_integer(&writer, 1);
-	  cbor_encode_text_string(&writer, "b");
+	  cbor_encode_text_string(&writer, "b", 1);
 	  cbor_encode_array_indefinite(&writer);
 	    cbor_encode_unsigned_integer(&writer, 2);
 	    cbor_encode_unsigned_integer(&writer, 3);
@@ -295,10 +295,10 @@ TEST(Encoder, WhenIndefiniteLengthMapInArrayGiven) {
 	const uint8_t expected[] = { 0x82,0x61,0x61,0xbf,0x61,0x62,0x61,0x63,
 		0xff };
 	cbor_encode_array(&writer, 2);
-	  cbor_encode_text_string(&writer, "a");
+	  cbor_encode_text_string(&writer, "a", 1);
 	  cbor_encode_map_indefinite(&writer);
-	    cbor_encode_text_string(&writer, "b");
-	    cbor_encode_text_string(&writer, "c");
+	    cbor_encode_text_string(&writer, "b", 1);
+	    cbor_encode_text_string(&writer, "c", 1);
 	  cbor_encode_break(&writer);
 	LONGS_EQUAL(9, writer.bufidx);
 	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
@@ -461,4 +461,19 @@ TEST(Encoder, WhenDoublePrecisionFloatGiven3) {
 	cbor_encode_double(&writer, -4.1);
 	LONGS_EQUAL(9, writer.bufidx);
 	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
+}
+
+TEST(Encoder, WhenNullTerminatedTextStringGiven) {
+	char const *expected = "A null terminated string";
+	cbor_encode_text_string_indefinite(&writer);
+	cbor_encode_null_terminated_text_string(&writer, expected);
+	MEMCMP_EQUAL(expected, &writer.buf[3], sizeof(expected));
+}
+
+TEST(Encoder, When_null_terminated_text_string_WithNullParameterGiven) {
+	cbor_encode_text_string_indefinite(&writer);
+	cbor_encode_null_terminated_text_string(&writer, NULL);
+	LONGS_EQUAL(2, writer.bufidx);
+	LONGS_EQUAL(0x7F, writer.buf[0]);
+	LONGS_EQUAL(0x60, writer.buf[1]);
 }

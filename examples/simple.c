@@ -54,7 +54,7 @@ static size_t encode_simple_data(void *buf, size_t bufsize)
 	cbor_writer_t writer;
 	cbor_writer_init(&writer, buf, bufsize);
 
-        cbor_encode_text_string(&writer, "Hello, World!");
+        cbor_encode_null_terminated_text_string(&writer, "Hello, World!");
 	cbor_encode_unsigned_integer(&writer, 1661225893);
 	cbor_encode_bool(&writer, true);
 
