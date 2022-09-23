@@ -15,7 +15,7 @@ extern "C" {
 #include <stdint.h>
 
 #if !defined(CBOR_RECURSION_MAX_LEVEL)
-#define CBOR_RECURSION_MAX_LEVEL			4
+#define CBOR_RECURSION_MAX_LEVEL			8
 #endif
 
 #define CBOR_INDEFINITE_VALUE				(-1)

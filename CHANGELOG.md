@@ -2,6 +2,7 @@
 - **Breaking Change**: Revert `cbor_encode_text_string()` to its original version
 - Add `cbor_encode_null_terminated_string()`
 - Fix to conform to C99 standard removing `strnlen()`
+- Increase the maximum recursion level from 4 to 8
 
 ## v0.2.0 - August 24, 2022
 - **Breaking Change**: Change the reader and the parser initializer prototypes
