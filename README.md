@@ -21,6 +21,17 @@ include $(CBOR_ROOT)/cbor.mk
 ### CMake
 
 ```cmake
+include(FetchContent)
+FectchContent_Declare(cbor
+                      GIT_REPOSITORY https://github.com/libmcu/cbor.git
+                      GIT_TAG main
+)
+FetchContent_MakeAvailable(cbor)
+```
+
+or
+
+```cmake
 set(CBOR_ROOT <THIRD_PARTY_DIR>/cbor)
 include(${CBOR_ROOT}/cbor.cmake)
 ```
