@@ -22,7 +22,7 @@ include $(CBOR_ROOT)/cbor.mk
 
 ```cmake
 include(FetchContent)
-FectchContent_Declare(cbor
+FetchContent_Declare(cbor
                       GIT_REPOSITORY https://github.com/libmcu/cbor.git
                       GIT_TAG main
 )
@@ -43,7 +43,7 @@ Please see the [examples](examples).
   - Define the macro for big endian machine. The default is little endian.
 * `CBOR_RECURSION_MAX_LEVEL`
   - This is set to avoid stack overflow from recursion. The default maximum
-    depth is 4.
+    depth is 8.
 
 ### Parser
 
