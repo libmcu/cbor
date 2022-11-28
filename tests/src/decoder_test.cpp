@@ -815,6 +815,16 @@ TEST(Decoder, ShouldReturnIllegal_WhenIncompleteMapGiven2) {
 	}
 }
 
+TEST(Decoder, ShouldCleanBufferFirstBeforeUsed_WhenGabageGiven) {
+	uint8_t m[] = { 0xa1, 0x61, 0x77, 0x0a };
+	size_t n;
+	uint32_t t = 0x12345678;
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, m, sizeof(m), &n));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_decode(&reader, &items[2], &t, sizeof(t)));
+	LONGS_EQUAL(10, t);
+}
+
 #if 0
 TEST(Decoder, ShouldParseIncremental) {
 	// [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]

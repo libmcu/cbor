@@ -6,6 +6,7 @@
 
 #include "cbor/decoder.h"
 #include <stdbool.h>
+#include <string.h>
 
 #if !defined(MIN)
 #define MIN(a, b)				(((a) > (b))? (b) : (a))
@@ -163,6 +164,8 @@ cbor_error_t cbor_decode(cbor_reader_t const *reader, cbor_item_t const *item,
 	if (item->size > bufsize || bufsize == 0 || buf == NULL) {
 		return CBOR_OVERRUN;
 	}
+
+	memset(buf, 0, bufsize);
 
 	return decoders[item->type](item, reader->msg, (uint8_t *)buf, bufsize);
 }
