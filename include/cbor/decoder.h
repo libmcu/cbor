@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#include "cbor/cbor.h"
+#include "cbor/base.h"
 
 /**
  * Decode a CBOR data item

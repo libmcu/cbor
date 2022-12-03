@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "cbor/cbor.h"
+#include "cbor/base.h"
 
 #if !defined(assert)
 #define assert(expr)

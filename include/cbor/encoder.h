@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#include "cbor/cbor.h"
+#include "cbor/base.h"
 #include <stdbool.h>
 
 cbor_error_t cbor_encode_unsigned_integer(cbor_writer_t *writer, uint64_t value);
