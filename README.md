@@ -37,7 +37,32 @@ include(${CBOR_ROOT}/cbor.cmake)
 ```
 
 ## Usage
-Please see the [examples](examples).
+
+```c
+static void parse_cert(const struct cbor_parser *parser, const void *data, size_t datasize, void *arg) {
+	...
+}
+static void parse_key(const struct cbor_parser *parser, const void *data, size_t datasize, void *arg) {
+	...
+}
+
+static const struct cbor_parser parsers[] = {
+	{ .key = "certificate", .run = parse_cert },
+	{ .key = "privateKey",  .run = parse_key },
+};
+
+cbor_reader_t reader;
+cbor_item_t items[MAX_ITEMS];
+
+cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+cbor_unmarshal(&reader, parsers, sizeof(parsers) / sizeof(*parsers), msg, msglen, 0);
+
+...
+```
+
+Please refer to [examples](examples).
+
+### Option
 
 * `CBOR_BIG_ENDIAN`
   - Define the macro for big endian machine. The default is little endian.
@@ -120,3 +145,4 @@ cbor_encode_map(&writer, 2);
 * A negative integer ranges down to -2^63-1 other than -2^64 in the specification
 * Sorting of encoded map keys is not supported
 * Tag item is not implemented yet
+* `cbor_unmarshal()` only works on the major type 5: map with string key
