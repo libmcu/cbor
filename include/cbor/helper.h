@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#include "cbor/cbor.h"
+#include "cbor/base.h"
 
 const char *cbor_stringify_error(cbor_error_t err);
 const char *cbor_stringify_item(cbor_item_t *item);
