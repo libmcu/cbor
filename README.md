@@ -51,16 +51,16 @@ static const struct cbor_parser parsers[] = {
 	{ .key = "privateKey",  .run = parse_key },
 };
 
-void process_cbor_message(const void *msg, size_t msglen) {
-	cbor_reader_t reader;
-	cbor_item_t items[MAX_ITEMS];
+cbor_reader_t reader;
+cbor_item_t items[MAX_ITEMS];
 
-	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
-	cbor_unmarshal(&reader, parsers, sizeof(parsers) / sizeof(*parsers), msg, msglen, 0);
+cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+cbor_unmarshal(&reader, parsers, sizeof(parsers) / sizeof(*parsers), msg, msglen, 0);
 
-	...
-}
+...
 ```
+
+Note that `cbor_unmarshal()` only works on the major type 5: map.
 
 Please refer to [examples](examples).
 
