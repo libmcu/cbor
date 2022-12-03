@@ -37,7 +37,34 @@ include(${CBOR_ROOT}/cbor.cmake)
 ```
 
 ## Usage
-Please see the [examples](examples).
+
+```c
+static void parse_cert(const struct cbor_parser *parser, cbor_reader_t const *reader, cbor_item_t const *item, void *arg) {
+	...
+}
+static void parse_key(const struct cbor_parser *parser, cbor_reader_t const *reader, cbor_item_t const *item, void *arg) {
+	...
+}
+
+static const struct cbor_parser parsers[] = {
+	{ .key = "certificate", .run = parse_cert },
+	{ .key = "privateKey",  .run = parse_key },
+};
+
+void process_cbor_message(const void *msg, size_t msglen) {
+	cbor_reader_t reader;
+	cbor_item_t items[MAX_ITEMS];
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	cbor_unmarshal(&reader, msg, msglen, parsers, sizeof(parsers) / sizeof(*parsers), 0);
+
+	...
+}
+```
+
+Please refer to [examples](examples).
+
+### Option
 
 * `CBOR_BIG_ENDIAN`
   - Define the macro for big endian machine. The default is little endian.

@@ -171,6 +171,6 @@ void complex_example(void const *data, size_t datasize, void *udt)
 	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
 	cbor_error_t err = cbor_parse(&reader, data, datasize, &n);
 	if (err == CBOR_SUCCESS || err == CBOR_BREAK) {
-		cbor_iterate(&reader, items, n, 0, convert, udt);
+		cbor_iterate(&reader, 0, convert, udt);
 	}
 }
