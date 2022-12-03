@@ -52,5 +52,6 @@ TEST(Helper, t) {
 	mock().expectOneCall("parse_cert").withParameter("datasize", 9);
 	mock().expectOneCall("parse_key").withParameter("datasize", 16);
 
-	cbor_unmarshal(&reader, parsers, sizeof(parsers), msg, sizeof(msg), 0);
+	cbor_unmarshal(&reader, parsers, sizeof(parsers) / sizeof(*parsers),
+			msg, sizeof(msg), 0);
 }
