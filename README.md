@@ -39,11 +39,17 @@ include(${CBOR_ROOT}/cbor.cmake)
 ## Usage
 
 ```c
-static void parse_cert(const struct cbor_parser *parser, const void *data, size_t datasize, void *arg) {
-	...
+static void parse_cert(const cbor_reader_t *reader,
+		const struct cbor_parser *parser,
+		const cbor_item_t *item, void *arg) {
+	struct your_data_type *out = arg;
+	cbor_decode(reader, item, out->cert, sizeof(out->cert));
 }
-static void parse_key(const struct cbor_parser *parser, const void *data, size_t datasize, void *arg) {
-	...
+static void parse_key(const cbor_reader_t *reader,
+		const struct cbor_parser *parser,
+		const cbor_item_t *item, void *arg) {
+	struct your_data_type *out = arg;
+	cbor_decode(reader, item, out->key, sizeof(out->key));
 }
 
 static const struct cbor_parser parsers[] = {
@@ -55,7 +61,8 @@ cbor_reader_t reader;
 cbor_item_t items[MAX_ITEMS];
 
 cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
-cbor_unmarshal(&reader, parsers, sizeof(parsers) / sizeof(*parsers), msg, msglen, 0);
+cbor_unmarshal(&reader, parsers, sizeof(parsers) / sizeof(*parsers),
+		msg, msglen, &your_data_type);
 
 ...
 ```
