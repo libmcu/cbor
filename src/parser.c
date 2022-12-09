@@ -7,9 +7,6 @@
 #include "cbor/parser.h"
 #include <stdbool.h>
 
-#if !defined(MIN)
-#define MIN(a, b)				(((a) > (b))? (b) : (a))
-#endif
 #if !defined(assert)
 #define assert(expr)
 #endif
@@ -111,7 +108,9 @@ static cbor_error_t parse(struct parser_context *ctx, size_t maxitems)
 		err = parsers[ctx->major_type](ctx);
 
 		if (err == CBOR_BREAK) {
-			if (ctx->reader->msgidx == ctx->reader->msgsize) {
+			if ((maxitems == (size_t)CBOR_INDEFINITE_VALUE) ||
+					(ctx->reader->msgidx ==
+						ctx->reader->msgsize)) {
 				break;
 			}
 		} else if (err != CBOR_SUCCESS) {
@@ -184,7 +183,7 @@ static cbor_error_t do_recursive(struct parser_context *ctx)
 
 	ctx->reader->itemidx++;
 
-	return parse(ctx, MIN(len, ctx->reader->maxitems - ctx->reader->itemidx));
+	return parse(ctx, len);
 }
 
 /* TODO: Implement tag */
