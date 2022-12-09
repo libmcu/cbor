@@ -1,3 +1,10 @@
+## v0.3.1 - December 9, 2022
+- Add CMake scaffolding
+- Fix garbage data in the uninitialized buffer when decoding
+- Separate base.h from cbor.h to use cbor.h as single header file with all the necessary includes
+- Add unmarshal functionality for map
+- Fix not working break stop code on indefinite array
+
 ## v0.3.0 - September 23, 2022
 - **Breaking Change**: Revert `cbor_encode_text_string()` to its original version
 - Add `cbor_encode_null_terminated_string()`
