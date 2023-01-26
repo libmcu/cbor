@@ -2,8 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(cbor LANGUAGES C CXX)
 
-set(CBOR_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
-include(${CBOR_ROOT}/cbor.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/cbor.cmake)
 
 add_library(${PROJECT_NAME} STATIC ${CBOR_SRCS})
 

@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MIT
 
 list(APPEND CBOR_SRCS
-	${CBOR_ROOT}/src/common.c
-	${CBOR_ROOT}/src/parser.c
-	${CBOR_ROOT}/src/decoder.c
-	${CBOR_ROOT}/src/encoder.c
-	${CBOR_ROOT}/src/helper.c
-	${CBOR_ROOT}/src/ieee754.c
+	${CMAKE_CURRENT_LIST_DIR}/src/common.c
+	${CMAKE_CURRENT_LIST_DIR}/src/parser.c
+	${CMAKE_CURRENT_LIST_DIR}/src/decoder.c
+	${CMAKE_CURRENT_LIST_DIR}/src/encoder.c
+	${CMAKE_CURRENT_LIST_DIR}/src/helper.c
+	${CMAKE_CURRENT_LIST_DIR}/src/ieee754.c
 )
-list(APPEND CBOR_INCS ${CBOR_ROOT}/include)
+list(APPEND CBOR_INCS ${CMAKE_CURRENT_LIST_DIR}/include)
