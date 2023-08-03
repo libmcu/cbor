@@ -17,7 +17,7 @@ struct parser_ctx {
 };
 
 static const struct cbor_parser *get_parser(const struct parser_ctx *ctx,
-		uintptr_t intkey, const uint8_t *strkey, size_t strkey_len)
+		intptr_t intkey, const void *strkey, size_t strkey_len)
 {
 	for (size_t i = 0; i < ctx->nr_parsers; i++) {
 		const struct cbor_parser *p = &ctx->parsers[i];
@@ -30,7 +30,7 @@ static const struct cbor_parser *get_parser(const struct parser_ctx *ctx,
 			if (memcmp(p->key, strkey, strkey_len) == 0) {
 				return p;
 			}
-		} else if (intkey == (uintptr_t)p->key) {
+		} else if (intkey == (intptr_t)p->key) {
 			return p;
 		}
 	}
@@ -42,9 +42,9 @@ static void parse_item(const cbor_reader_t *reader, const cbor_item_t *item,
 		    const cbor_item_t *parent, void *arg)
 {
 	struct parser_ctx *ctx = (struct parser_ctx *)arg;
-	const uint8_t *strkey = NULL;
+	const void *strkey = NULL;
 	size_t strkey_len = 0;
-	uintptr_t intkey = -1;
+	intptr_t intkey = -1;
 
 	if (parent && parent->type == CBOR_ITEM_MAP) {
 		if ((item - parent) % 2) { /* key */
