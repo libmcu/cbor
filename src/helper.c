@@ -26,7 +26,7 @@ static const struct cbor_parser *get_parser(const struct parser_ctx *ctx,
 			continue;
 		}
 
-		if (strkey && strkey_len) {
+		if (strkey && strkey_len && p->keylen >= strkey_len) {
 			if (memcmp(p->key, strkey, strkey_len) == 0) {
 				return p;
 			}
