@@ -16,6 +16,7 @@ extern "C" {
 
 struct cbor_parser {
 	const void *key;
+	size_t keylen;
 	void (*run)(const cbor_reader_t *reader,
 			const struct cbor_parser *parser,
 			const cbor_item_t *item, void *arg);
