@@ -20,7 +20,6 @@ struct parser_context {
 
 	uint8_t recursion_depth;
 	_Static_assert(CBOR_RECURSION_MAX_LEVEL < 256, "");
-
 };
 
 typedef cbor_error_t (*type_parser_t)(struct parser_context *ctx);

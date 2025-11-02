@@ -80,7 +80,10 @@ static size_t iterate_each(const cbor_reader_t *reader,
 	size_t offset = 0;
 	size_t i = 0;
 
-	for (i = 0; (i + offset) < nr_items; i++) {
+	for (i = 0; i < nr_items; i++) {
+		if (!parent && (i + offset) >= nr_items) {
+			break;
+		}
 		const cbor_item_t *item = &items[i+offset];
 
 		if (item->type == CBOR_ITEM_MAP
