@@ -20,6 +20,8 @@ struct parser_context {
 
 	uint8_t recursion_depth;
 	_Static_assert(CBOR_RECURSION_MAX_LEVEL < 256, "");
+
+	bool dry_run;
 };
 
 typedef cbor_error_t (*type_parser_t)(struct parser_context *ctx);
@@ -126,16 +128,27 @@ static cbor_error_t parse(struct parser_context *ctx, size_t maxitems)
 	return err;
 }
 
+static void set_item(struct parser_context *ctx, cbor_item_data_t type,
+		     size_t offset, size_t size)
+{
+	if (ctx->dry_run) {
+		return;
+	}
+
+	cbor_item_t *item = &ctx->reader->items[ctx->reader->itemidx];
+	item->type = type;
+	item->size = size;
+	item->offset = offset;
+}
+
 static cbor_error_t do_integer(struct parser_context *ctx)
 {
 	if (ctx->following_bytes == (uint8_t)CBOR_INDEFINITE_VALUE) {
 		return CBOR_ILLEGAL;
 	}
 
-	cbor_item_t *item = &ctx->reader->items[ctx->reader->itemidx];
-	item->type = CBOR_ITEM_INTEGER;
-	item->size = (size_t)ctx->following_bytes;
-	item->offset = ctx->reader->msgidx;
+	set_item(ctx, CBOR_ITEM_INTEGER, ctx->reader->msgidx,
+			(size_t)ctx->following_bytes);
 
 	ctx->reader->msgidx += (size_t)(ctx->following_bytes + 1);
 	ctx->reader->itemidx++;
@@ -145,12 +158,9 @@ static cbor_error_t do_integer(struct parser_context *ctx)
 
 static cbor_error_t do_string(struct parser_context *ctx)
 {
-	cbor_item_t *item = &ctx->reader->items[ctx->reader->itemidx];
 	size_t len = go_get_item_length(ctx);
 
-	item->type = CBOR_ITEM_STRING;
-	item->size = len;
-	item->offset = ctx->reader->msgidx;
+	set_item(ctx, CBOR_ITEM_STRING, ctx->reader->msgidx, len);
 
 	if (len == (size_t)CBOR_INDEFINITE_VALUE) {
 		ctx->reader->itemidx++;
@@ -168,13 +178,10 @@ static cbor_error_t do_string(struct parser_context *ctx)
 
 static cbor_error_t do_recursive(struct parser_context *ctx)
 {
-	size_t current_item_index = ctx->reader->itemidx;
-	cbor_item_t *item = &ctx->reader->items[current_item_index];
 	size_t len = go_get_item_length(ctx);
 
-	item->type = (cbor_item_data_t)(ctx->major_type - 1);
-	item->offset = ctx->reader->msgidx;
-	item->size = len;
+	set_item(ctx, (cbor_item_data_t)(ctx->major_type - 1),
+			ctx->reader->msgidx, len);
 	if (len != (size_t)CBOR_INDEFINITE_VALUE &&
 			len > ctx->reader->msgsize - ctx->reader->msgidx) {
 		return CBOR_ILLEGAL;
@@ -194,12 +201,15 @@ static cbor_error_t do_tag(struct parser_context *ctx)
 
 static cbor_error_t do_float_and_other(struct parser_context *ctx)
 {
-	cbor_item_t *item = &ctx->reader->items[ctx->reader->itemidx];
 	cbor_error_t err = CBOR_SUCCESS;
+	cbor_item_data_t type = CBOR_ITEM_FLOAT;
+	size_t size = (size_t)ctx->following_bytes;
 
-	item->type = CBOR_ITEM_FLOAT;
-	item->size = (size_t)ctx->following_bytes;
-	item->offset = ctx->reader->msgidx;
+	if (ctx->following_bytes <= 1 &&
+			ctx->following_bytes != (uint8_t)CBOR_INDEFINITE_VALUE) {
+		type = CBOR_ITEM_SIMPLE_VALUE;
+	}
+	set_item(ctx, type, ctx->reader->msgidx, size);
 
 	if (ctx->following_bytes == (uint8_t)CBOR_INDEFINITE_VALUE) {
 		ctx->reader->msgidx++;
@@ -207,11 +217,9 @@ static cbor_error_t do_float_and_other(struct parser_context *ctx)
 		return CBOR_BREAK;
 	} else if (!has_valid_following_bytes(ctx, &err)) {
 		return err;
-	} else if (ctx->following_bytes <= 1) {
-		item->type = CBOR_ITEM_SIMPLE_VALUE;
 	}
 
-	ctx->reader->msgidx += item->size + 1;
+	ctx->reader->msgidx += size + 1;
 	ctx->reader->itemidx++;
 
 	return err;
@@ -229,6 +237,7 @@ cbor_error_t cbor_parse(cbor_reader_t *reader, void const *msg, size_t msgsize,
 
 	struct parser_context ctx = {
 		.reader = reader,
+		.dry_run = false,
 	};
 
 	cbor_error_t err = parse(&ctx, reader->maxitems);
@@ -239,6 +248,36 @@ cbor_error_t cbor_parse(cbor_reader_t *reader, void const *msg, size_t msgsize,
 
 	if (nitems_parsed != NULL) {
 		*nitems_parsed = reader->itemidx;
+	}
+
+	return err;
+}
+
+cbor_error_t cbor_count_items(void const *msg, size_t msgsize,
+		size_t *nitems_counted)
+{
+	cbor_reader_t reader = {
+		.msg = (uint8_t const *)msg,
+		.msgsize = msgsize,
+		.msgidx = 0,
+		.items = NULL,
+		.itemidx = 0,
+		.maxitems = (size_t)-1,
+	};
+
+	struct parser_context ctx = {
+		.reader = &reader,
+		.dry_run = true,
+	};
+
+	cbor_error_t err = parse(&ctx, reader.maxitems);
+
+	if (err == CBOR_SUCCESS && reader.msgidx < reader.msgsize) {
+		err = CBOR_OVERRUN;
+	}
+
+	if (nitems_counted != NULL) {
+		*nitems_counted = reader.itemidx;
 	}
 
 	return err;
