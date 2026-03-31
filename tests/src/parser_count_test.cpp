@@ -241,6 +241,21 @@ TEST(ParserCount,
 	LONGS_EQUAL(6, n);
 }
 
+TEST(ParserCount,
+     ShouldReturnIllegal_WhenOuterIndefiniteArrayMissingBreakAfterNestedBreak)
+{
+	uint8_t msg[] = { 0x9f, 0x7f, 0x61, 0x61, 0xff };
+	cbor_reader_t reader;
+	cbor_item_t items[16];
+	size_t n = 0;
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, msg, sizeof(msg), &n));
+
+	n = 0;
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
+}
+
 /* Regression tests: BREAK byte inside a definite-length container must be
  * treated as CBOR_ILLEGAL, not propagated as CBOR_BREAK to the caller. */
 

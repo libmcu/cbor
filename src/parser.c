@@ -90,7 +90,8 @@ static bool should_stop_on_break(uint8_t val, size_t maxitems,
 {
 	const bool direct = (val == 0xff); /* BREAK(major 7, add-info 31) */
 	const bool indefinite = (maxitems == (size_t)CBOR_INDEFINITE_VALUE);
-	const bool at_end = (ctx->reader->msgidx == ctx->reader->msgsize);
+	const bool at_end = !indefinite &&
+			(ctx->reader->msgidx == ctx->reader->msgsize);
 	return (direct && indefinite) || at_end;
 }
 
