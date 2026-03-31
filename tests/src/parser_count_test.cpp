@@ -302,3 +302,19 @@ TEST(ParserCount, ShouldReturnIllegal_WhenTopLevelBreakHasTrailingItem)
 	n = 0;
 	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
 }
+
+/* Regression test: a standalone 0xff (BREAK with no enclosing indefinite
+ * container) is malformed CBOR and must not be reported as success. */
+TEST(ParserCount, ShouldReturnIllegal_WhenTopLevelBreakIsStandalone)
+{
+	uint8_t msg[] = { 0xff };
+	cbor_reader_t reader;
+	cbor_item_t items[8];
+	size_t n = 0;
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, msg, sizeof(msg), &n));
+
+	n = 0;
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
+}

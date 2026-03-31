@@ -94,17 +94,9 @@ static bool should_stop_on_break(uint8_t val, size_t maxitems,
 	return (direct && indefinite) || at_end;
 }
 
-static bool is_top_level_break_at_end(const struct parser_context *ctx)
+static bool is_illegal_break(uint8_t val, size_t maxitems)
 {
-	return ctx->recursion_depth == 1 &&
-		ctx->reader->msgidx == ctx->reader->msgsize;
-}
-
-static bool is_illegal_break(uint8_t val, size_t maxitems,
-			     const struct parser_context *ctx)
-{
-	return val == 0xff && maxitems != (size_t)CBOR_INDEFINITE_VALUE &&
-		!is_top_level_break_at_end(ctx);
+	return val == 0xff && maxitems != (size_t)CBOR_INDEFINITE_VALUE;
 }
 
 static cbor_error_t parse(struct parser_context *ctx, size_t maxitems,
@@ -137,7 +129,7 @@ static cbor_error_t parse(struct parser_context *ctx, size_t maxitems,
 		err = parsers[ctx->major_type](ctx);
 
 		if (err == CBOR_BREAK) {
-			if (is_illegal_break(val, maxitems, ctx)) {
+			if (is_illegal_break(val, maxitems)) {
 				err = CBOR_ILLEGAL;
 				break;
 			} else if (should_stop_on_break(val, maxitems, ctx)) {
