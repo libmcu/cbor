@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdlib>
 #include <cstdio>
+#include <stdio.h>
 #include <string>
 
 #if defined(CBOR_PROJECT_ROOT)

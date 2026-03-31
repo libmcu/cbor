@@ -142,7 +142,7 @@ static size_t iterate_each(const cbor_reader_t *reader,
 			break;
 		}
 
-		if (cbor_decode(reader, item, 0, 0) == CBOR_BREAK) {
+		if (item->type == CBOR_ITEM_FLOAT && item->size == 0xffu) {
 			/* account for the BREAK token in the consumed count */
 			if (parent && parent->size == (size_t)
 					CBOR_INDEFINITE_VALUE) {

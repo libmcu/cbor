@@ -114,9 +114,8 @@ class Counter:
     def _should_stop_after_item(self, err: str, maxitems: int, cur: int) -> bool:
         if err == CBOR_BREAK:
             direct_break = cur == 0xFF
-            indefinite = maxitems == CBOR_INDEFINITE_VALUE
             at_end = self.msgidx == self.msgsize
-            return (direct_break and indefinite) or at_end
+            return direct_break or at_end
         return err != CBOR_SUCCESS
 
     def do_integer(self, following_bytes: int):
@@ -156,6 +155,8 @@ class Counter:
             itemidx_before = self.itemidx
             msgidx_before = self.msgidx
             err = self.parse(1)
+            if err == CBOR_BREAK:
+                return CBOR_ILLEGAL
             if err != CBOR_SUCCESS:
                 return err
             if self.itemidx == itemidx_before and self.msgidx == msgidx_before:
