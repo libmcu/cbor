@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #if !defined(CBOR_RECURSION_MAX_LEVEL)
@@ -166,6 +167,19 @@ size_t cbor_copy(uint8_t *dst, uint8_t const *src, size_t len);
  * @return bytes copied
  */
 size_t cbor_copy_be(uint8_t *dst, uint8_t const *src, size_t len);
+
+/**
+ * Check if a parsed item is a CBOR BREAK token.
+ *
+ * @param[in] item parsed CBOR item
+ *
+ * @return true if @p item is BREAK token, otherwise false
+ */
+static inline bool cbor_item_is_break(cbor_item_t const *item)
+{
+	return item->type == CBOR_ITEM_FLOAT &&
+		item->size == (size_t)(uint8_t)CBOR_INDEFINITE_VALUE;
+}
 
 #if defined(__cplusplus)
 }

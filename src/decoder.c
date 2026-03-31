@@ -5,7 +5,6 @@
  */
 
 #include "cbor/decoder.h"
-#include <stdbool.h>
 #include <string.h>
 
 #if !defined(MIN)
@@ -49,11 +48,6 @@ static uint8_t get_simple_value(uint8_t val)
 	default:
 		return val;
 	}
-}
-
-static bool is_break(cbor_item_t const *item)
-{
-	return item->type == CBOR_ITEM_FLOAT && item->size == 0xff;
 }
 
 static cbor_error_t decode_unsigned_integer(cbor_item_t const *item,
@@ -158,7 +152,7 @@ void const *cbor_decode_pointer(cbor_reader_t const *reader,
 cbor_error_t cbor_decode(cbor_reader_t const *reader, cbor_item_t const *item,
 		void *buf, size_t bufsize)
 {
-	if (is_break(item)) {
+	if (cbor_item_is_break(item)) {
 		return CBOR_BREAK;
 	}
 	if (item->size > bufsize || bufsize == 0 || buf == NULL) {

@@ -32,6 +32,17 @@ static bool can_run_item_count_tool(void)
 	return true;
 }
 
+static bool require_item_count_tool(void)
+{
+	if (can_run_item_count_tool()) {
+		return true;
+	}
+
+	CHECK_TEXT(false,
+			"python3 or tools/cbor_item_count.py is not available");
+	return false;
+}
+
 static std::string run_command(const char *command)
 {
 	std::string output;
@@ -52,7 +63,7 @@ TEST_GROUP(ToolItemCount){};
 
 TEST(ToolItemCount, ShouldPrintSuccessForValidDefiniteMap)
 {
-	if (!can_run_item_count_tool()) {
+	if (!require_item_count_tool()) {
 		return;
 	}
 
@@ -66,7 +77,7 @@ TEST(ToolItemCount, ShouldPrintSuccessForValidDefiniteMap)
 
 TEST(ToolItemCount, ShouldPrintIllegalForTruncatedDefiniteMap)
 {
-	if (!can_run_item_count_tool()) {
+	if (!require_item_count_tool()) {
 		return;
 	}
 
@@ -80,7 +91,7 @@ TEST(ToolItemCount, ShouldPrintIllegalForTruncatedDefiniteMap)
 TEST(ToolItemCount,
      ShouldPrintBreakWhenTopLevelIndefiniteArrayContainsNestedIndefiniteArray)
 {
-	if (!can_run_item_count_tool()) {
+	if (!require_item_count_tool()) {
 		return;
 	}
 
@@ -90,4 +101,43 @@ TEST(ToolItemCount,
 
 	STRCMP_CONTAINS("error: CBOR_BREAK", out.c_str());
 	STRCMP_CONTAINS("items: 6", out.c_str());
+}
+
+TEST(ToolItemCount, ShouldPrintIllegalForMissingBreakInIndefiniteString)
+{
+	if (!require_item_count_tool()) {
+		return;
+	}
+
+	std::string out = run_command(
+		("python3 \"" + get_script_path() + "\" --hex \"7f 61 61\"")
+			.c_str());
+
+	STRCMP_CONTAINS("error: CBOR_ILLEGAL", out.c_str());
+}
+
+TEST(ToolItemCount, ShouldPrintIllegalForMissingBreakInIndefiniteArray)
+{
+	if (!require_item_count_tool()) {
+		return;
+	}
+
+	std::string out = run_command(
+		("python3 \"" + get_script_path() + "\" --hex \"9f 01\"")
+			.c_str());
+
+	STRCMP_CONTAINS("error: CBOR_ILLEGAL", out.c_str());
+}
+
+TEST(ToolItemCount, ShouldPrintIllegalForMissingBreakInIndefiniteMap)
+{
+	if (!require_item_count_tool()) {
+		return;
+	}
+
+	std::string out = run_command(
+		("python3 \"" + get_script_path() + "\" --hex \"bf 61 61 01\"")
+			.c_str());
+
+	STRCMP_CONTAINS("error: CBOR_ILLEGAL", out.c_str());
 }

@@ -131,6 +131,8 @@ class Counter:
 
         if length == CBOR_INDEFINITE_VALUE:
             err = self.parse(CBOR_INDEFINITE_VALUE)
+            if err == CBOR_SUCCESS:
+                return CBOR_ILLEGAL
             return err
         if length > (self.msgsize - self.msgidx):
             return CBOR_ILLEGAL
@@ -149,6 +151,8 @@ class Counter:
 
         if length == CBOR_INDEFINITE_VALUE:
             err = self.parse(CBOR_INDEFINITE_VALUE)
+            if err == CBOR_SUCCESS:
+                return CBOR_ILLEGAL
             return err
 
         for _ in range(expected_items):
