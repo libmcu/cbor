@@ -10,8 +10,6 @@
 
 #include <cstdint>
 #include <cstring>
-#include <iterator>
-
 #include "cbor/cbor.h"
 
 static const char *get_mock_name(const struct cbor_parser *parser)
@@ -79,7 +77,7 @@ TEST_GROUP(Helper)
 
 	void setup(void)
 	{
-		cbor_reader_init(&reader, items, std::size(items));
+		cbor_reader_init(&reader, items, sizeof(items) / sizeof(items[0]));
 	}
 	void teardown(void)
 	{
@@ -277,7 +275,7 @@ TEST(Helper, iterate_ShouldStopIteration_WhenMapSizeWouldOverflow)
 	uint8_t dummy[4] = { 0 };
 
 	cbor_reader_init(&crafted_reader, crafted_items,
-			 std::size(crafted_items));
+			 sizeof(crafted_items) / sizeof(crafted_items[0]));
 	crafted_reader.msg = dummy;
 	crafted_reader.msgsize = sizeof(dummy);
 	crafted_reader.itemidx = 3;
@@ -308,7 +306,7 @@ TEST(Helper, iterate_ShouldNotStopIteration_WhenMapSizeIsAtOverflowBoundary)
 	uint8_t dummy[4] = { 0 };
 
 	cbor_reader_init(&crafted_reader, crafted_items,
-			 std::size(crafted_items));
+			 sizeof(crafted_items) / sizeof(crafted_items[0]));
 	crafted_reader.msg = dummy;
 	crafted_reader.msgsize = sizeof(dummy);
 	crafted_reader.itemidx = 2;
