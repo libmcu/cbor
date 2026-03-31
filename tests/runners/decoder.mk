@@ -10,6 +10,7 @@ SRC_FILES = \
 TEST_SRC_FILES = \
 	src/decoder_test.cpp \
 	src/parser_count_test.cpp \
+	src/tool_item_count_test.cpp \
 	src/test_all.cpp \
 
 INCLUDE_DIRS = \

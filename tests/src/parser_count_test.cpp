@@ -112,3 +112,23 @@ TEST(ParserCount, ShouldReturnOverrun_WhenIndefiniteArrayExceedsItemBuffer)
 		    cbor_parse(&limited_reader, msg, sizeof(msg), &parsed));
 	LONGS_EQUAL(2, parsed);
 }
+
+TEST(ParserCount,
+     ShouldReturnIllegal_WhenDefiniteMapMissingValueAfterComplexKey)
+{
+	uint8_t msg[] = { 0xa1, 0x82, 0x01, 0x02 };
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
+	LONGS_EQUAL(4, n);
+}
+
+TEST(ParserCount,
+     ShouldReturnIllegal_WhenDefiniteArrayMissingItemAfterComplexElement)
+{
+	uint8_t msg[] = { 0x82, 0x82, 0x01, 0x02 };
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
+	LONGS_EQUAL(4, n);
+}

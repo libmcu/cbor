@@ -85,15 +85,17 @@ static size_t go_get_item_length(struct parser_context *ctx)
 	return (size_t)len;
 }
 
-static cbor_error_t parse(struct parser_context *ctx, size_t maxitems)
+static cbor_error_t parse(struct parser_context *ctx, size_t maxitems,
+		size_t *nitems_parsed)
 {
 	cbor_error_t err = CBOR_SUCCESS;
+	size_t i;
 
 	if (++ctx->recursion_depth > CBOR_RECURSION_MAX_LEVEL) {
 		return CBOR_EXCESSIVE;
 	}
 
-	for (size_t i = 0; i < maxitems &&
+	for (i = 0; i < maxitems &&
 			ctx->reader->itemidx < ctx->reader->maxitems &&
 			ctx->reader->msgidx < ctx->reader->msgsize; i++) {
 		uint8_t val = ctx->reader->msg[ctx->reader->msgidx];
@@ -122,8 +124,11 @@ static cbor_error_t parse(struct parser_context *ctx, size_t maxitems)
 	}
 
 	ctx->recursion_depth--;
+	if (nitems_parsed != NULL) {
+		*nitems_parsed = i;
+	}
 
-	assert(ctx->msgidx <= ctx->msgsize);
+	assert(ctx->reader->msgidx <= ctx->reader->msgsize);
 
 	return err;
 }
@@ -165,7 +170,7 @@ static cbor_error_t do_string(struct parser_context *ctx)
 
 	if (len == (size_t)CBOR_INDEFINITE_VALUE) {
 		ctx->reader->itemidx++;
-		err = parse(ctx, (size_t)CBOR_INDEFINITE_VALUE);
+		err = parse(ctx, (size_t)CBOR_INDEFINITE_VALUE, NULL);
 		if (err != CBOR_SUCCESS) {
 			return err;
 		} else if (ctx->reader->itemidx >= ctx->reader->maxitems) {
@@ -187,7 +192,6 @@ static cbor_error_t do_recursive(struct parser_context *ctx)
 {
 	size_t len = go_get_item_length(ctx);
 	size_t expected_items = len;
-	size_t nitems_before = ctx->reader->itemidx;
 	cbor_error_t err;
 
 	set_item(ctx, (cbor_item_data_t)(ctx->major_type - 1),
@@ -201,20 +205,13 @@ static cbor_error_t do_recursive(struct parser_context *ctx)
 	}
 
 	ctx->reader->itemidx++;
+	size_t nparsed = 0;
 
-	err = parse(ctx, expected_items);
-	if (len == (size_t)CBOR_INDEFINITE_VALUE) {
-		if (err != CBOR_SUCCESS) {
-			return err;
-		} else if (ctx->reader->itemidx >= ctx->reader->maxitems) {
-			return CBOR_OVERRUN;
-		}
-		return CBOR_ILLEGAL;
-	} else if (err != CBOR_SUCCESS) {
+	if ((err = parse(ctx, expected_items, &nparsed)) != CBOR_SUCCESS) {
 		return err;
 	}
 
-	if ((ctx->reader->itemidx - nitems_before - 1) < expected_items) {
+	if (len == (size_t)CBOR_INDEFINITE_VALUE || nparsed < expected_items) {
 		if (ctx->reader->itemidx >= ctx->reader->maxitems) {
 			return CBOR_OVERRUN;
 		}
@@ -272,7 +269,7 @@ cbor_error_t cbor_parse(cbor_reader_t *reader, void const *msg, size_t msgsize,
 		.dry_run = false,
 	};
 
-	cbor_error_t err = parse(&ctx, reader->maxitems);
+	cbor_error_t err = parse(&ctx, reader->maxitems, NULL);
 
 	if (err == CBOR_SUCCESS && reader->msgidx < reader->msgsize) {
 		err = CBOR_OVERRUN;
@@ -306,7 +303,7 @@ cbor_error_t cbor_count_items(void const *msg, size_t msgsize,
 	 * reader.maxitems == (size_t)-1 conflicts with BREAK sentinel behavior
 	 * and can terminate early. msgsize is a safe upper bound; long-term,
 	 * split maxitems and break policy in parse(). */
-	cbor_error_t err = parse(&ctx, reader.msgsize);
+	cbor_error_t err = parse(&ctx, reader.msgsize, NULL);
 
 	if (err == CBOR_SUCCESS && reader.msgidx < reader.msgsize) {
 		err = CBOR_OVERRUN;

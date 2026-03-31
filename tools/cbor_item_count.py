@@ -82,7 +82,7 @@ class Counter:
             elif major_type in (2, 3):
                 err = self.do_string(additional_info, following_bytes)
             elif major_type in (4, 5):
-                err = self.do_recursive(additional_info, following_bytes)
+                err = self.do_recursive(major_type, additional_info, following_bytes)
             elif major_type == 6:
                 err = CBOR_INVALID
             elif major_type == 7:
@@ -114,21 +114,37 @@ class Counter:
         self.itemidx += 1
 
         if length == CBOR_INDEFINITE_VALUE:
-            return self.parse(CBOR_INDEFINITE_VALUE)
+            err = self.parse(CBOR_INDEFINITE_VALUE)
+            return err
         if length > (self.msgsize - self.msgidx):
             return CBOR_ILLEGAL
 
         self.msgidx += length
         return CBOR_SUCCESS
 
-    def do_recursive(self, additional_info: int, following_bytes: int):
+    def do_recursive(self, major_type: int, additional_info: int,
+                     following_bytes: int):
         length = self.go_get_item_length(additional_info, following_bytes)
+        expected_items = length
         self.itemidx += 1
 
-        if length != CBOR_INDEFINITE_VALUE and length > (self.msgsize - self.msgidx):
-            return CBOR_ILLEGAL
+        if length != CBOR_INDEFINITE_VALUE and major_type == 5:
+            expected_items = length * 2
 
-        return self.parse(length)
+        if length == CBOR_INDEFINITE_VALUE:
+            err = self.parse(CBOR_INDEFINITE_VALUE)
+            return err
+
+        for _ in range(expected_items):
+            itemidx_before = self.itemidx
+            msgidx_before = self.msgidx
+            err = self.parse(1)
+            if err != CBOR_SUCCESS:
+                return err
+            if self.itemidx == itemidx_before and self.msgidx == msgidx_before:
+                return CBOR_ILLEGAL
+
+        return CBOR_SUCCESS
 
     def do_float_and_other(self, following_bytes: int):
         if following_bytes == CBOR_INDEFINITE_VALUE:
