@@ -232,9 +232,11 @@ static cbor_error_t do_recursive(struct parser_context *ctx)
 	size_t nparsed = 0;
 
 	if ((err = parse(ctx, expected_items, &nparsed)) != CBOR_SUCCESS) {
-		if (err == CBOR_BREAK && len != (size_t)CBOR_INDEFINITE_VALUE
-				&& nparsed < expected_items) {
-			return CBOR_ILLEGAL;
+		if (err == CBOR_BREAK && len != (size_t)CBOR_INDEFINITE_VALUE) {
+			if (nparsed < expected_items) {
+				return CBOR_ILLEGAL;
+			}
+			return CBOR_SUCCESS;
 		}
 		return err;
 	}

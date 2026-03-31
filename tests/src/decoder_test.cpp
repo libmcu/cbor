@@ -589,7 +589,7 @@ TEST(Decoder, ShouldDecodeArray_WhenMultiLevelIndefiniteArrarGiven3)
 	uint8_t m[] = { 0x83, 0x01, 0x82, 0x02, 0x03, 0x9f, 0x04, 0x05, 0xff };
 	size_t n;
 
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, m, sizeof(m), &n));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, m, sizeof(m), &n));
 	LONGS_EQUAL(9, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 3);
@@ -675,7 +675,7 @@ TEST(Decoder, ShouldDecodeArray_WhenInfiniteMapIncluded)
 	uint8_t m[] = { 0x82, 0x61, 0x61, 0xbf, 0x61, 0x62, 0x61, 0x63, 0xff };
 	size_t n;
 
-	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, m, sizeof(m), &n));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, m, sizeof(m), &n));
 	LONGS_EQUAL(6, n);
 
 	mock().expectOneCall("f_array").withParameter("size", 2);

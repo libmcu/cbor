@@ -133,6 +133,46 @@ TEST(ParserCount,
 	LONGS_EQUAL(4, n);
 }
 
+TEST(ParserCount,
+	     ShouldParseSuccessfully_WhenDefiniteArrayContainsIndefiniteTextString)
+{
+	uint8_t msg[] = { 0x81, 0x7f, 0x61, 0x61, 0xff };
+	cbor_reader_t reader;
+	cbor_item_t items[16];
+	size_t n = 0;
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
+	LONGS_EQUAL(4, n);
+}
+
+TEST(ParserCount,
+	     ShouldCountSuccessfully_WhenDefiniteArrayContainsIndefiniteTextString)
+{
+	uint8_t msg[] = { 0x81, 0x7f, 0x61, 0x61, 0xff };
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_count_items(msg, sizeof(msg), &n));
+	LONGS_EQUAL(4, n);
+}
+
+TEST(ParserCount,
+	     ShouldReturnIllegal_WhenDefiniteArrayIsMissingItemAfterIndefiniteTextString)
+{
+	uint8_t msg[] = { 0x82, 0x7f, 0x61, 0x61, 0xff };
+	cbor_reader_t reader;
+	cbor_item_t items[16];
+	size_t n = 0;
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, msg, sizeof(msg), &n));
+	LONGS_EQUAL(4, n);
+
+	n = 0;
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
+	LONGS_EQUAL(4, n);
+}
+
 /* Regression tests: nested indefinite container BREAK must not terminate the
  * outer indefinite container prematurely. */
 

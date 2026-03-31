@@ -160,7 +160,14 @@ class Counter:
             msgidx_before = self.msgidx
             err = self.parse(1)
             if err == CBOR_BREAK:
-                return CBOR_ILLEGAL
+                direct_break = (
+                    msgidx_before < self.msgsize and
+                    self.data[msgidx_before] == 0xFF and
+                    self.itemidx == itemidx_before + 1
+                )
+                if direct_break:
+                    return CBOR_ILLEGAL
+                err = CBOR_SUCCESS
             if err != CBOR_SUCCESS:
                 return err
             if self.itemidx == itemidx_before and self.msgidx == msgidx_before:

@@ -89,6 +89,21 @@ TEST(ToolItemCount, ShouldPrintIllegalForTruncatedDefiniteMap)
 }
 
 TEST(ToolItemCount,
+	     ShouldPrintSuccessWhenDefiniteArrayContainsIndefiniteTextString)
+{
+	if (!require_item_count_tool()) {
+		return;
+	}
+
+	std::string out = run_command(("python3 \"" + get_script_path() +
+				       "\" --hex \"81 7f 61 61 ff\"")
+				      .c_str());
+
+	STRCMP_CONTAINS("error: CBOR_SUCCESS", out.c_str());
+	STRCMP_CONTAINS("items: 4", out.c_str());
+}
+
+TEST(ToolItemCount,
      ShouldPrintBreakWhenTopLevelIndefiniteArrayContainsNestedIndefiniteArray)
 {
 	if (!require_item_count_tool()) {
