@@ -39,7 +39,7 @@ static const struct cbor_parser *get_parser(const struct parser_ctx *ctx,
 }
 
 static void parse_item(const cbor_reader_t *reader, const cbor_item_t *item,
-		    const cbor_item_t *parent, void *arg)
+		const cbor_item_t *parent, void *arg)
 {
 	struct parser_ctx *ctx = (struct parser_ctx *)arg;
 	const void *strkey = NULL;
@@ -51,17 +51,17 @@ static void parse_item(const cbor_reader_t *reader, const cbor_item_t *item,
 			return;
 		}
 
-		if ((item-1)->type == CBOR_ITEM_INTEGER) {
-			cbor_decode(reader, item-1, &intkey, sizeof(intkey));
+		if ((item - 1)->type == CBOR_ITEM_INTEGER) {
+			cbor_decode(reader, item - 1, &intkey, sizeof(intkey));
 		} else {
-			strkey = cbor_decode_pointer(reader, item-1);
-			strkey_len = (item-1)->size;
+			strkey = cbor_decode_pointer(reader, item - 1);
+			strkey_len = (item - 1)->size;
 		}
 	}
 
 	if (strkey || intkey != -1) {
-		const struct cbor_parser *parser = get_parser(ctx,
-				intkey, strkey, strkey_len);
+		const struct cbor_parser *parser =
+			get_parser(ctx, intkey, strkey, strkey_len);
 
 		if (parser && parser->run) {
 			parser->run(reader, parser, item, ctx->arg);
@@ -70,32 +70,45 @@ static void parse_item(const cbor_reader_t *reader, const cbor_item_t *item,
 }
 
 static size_t iterate_each(const cbor_reader_t *reader,
-		    const cbor_item_t *items, size_t nr_items,
-		    const cbor_item_t *parent,
-		    void (*callback_each)(const cbor_reader_t *reader,
-			    const cbor_item_t *item, const cbor_item_t *parent,
-			    void *arg),
-		    void *arg)
+		const cbor_item_t *items, size_t nr_items, size_t max_nodes,
+		const cbor_item_t *parent, void (*callback_each)
+			(const cbor_reader_t *reader, const cbor_item_t *item,
+				   const cbor_item_t *parent, void *arg),
+		void *arg)
 {
 	size_t offset = 0;
 	size_t i = 0;
 
 	for (i = 0; i < nr_items; i++) {
-		if (!parent && (i + offset) >= nr_items) {
+		if ((i + offset) >= max_nodes) {
 			break;
 		}
-		const cbor_item_t *item = &items[i+offset];
+		const cbor_item_t *item = &items[i + offset];
 
-		if (item->type == CBOR_ITEM_MAP
-				|| item->type == CBOR_ITEM_ARRAY) {
-			size_t len = item->type == CBOR_ITEM_MAP?
-					item->size*2 : item->size;
-			offset += iterate_each(reader, item+1, len, item,
+		if (item->type == CBOR_ITEM_MAP ||
+				item->type == CBOR_ITEM_ARRAY) {
+			size_t len = item->size;
+
+			if (item->size == (size_t)CBOR_INDEFINITE_VALUE) {
+				len = max_nodes - (i + offset + 1);
+			} else if (item->type == CBOR_ITEM_MAP) {
+				if (item->size > SIZE_MAX / 2) {
+					break;
+				}
+				len *= 2;
+			}
+
+			offset += iterate_each(reader, item + 1, len,
+					max_nodes - (i + offset + 1), item,
 					callback_each, arg);
 			continue;
 		}
 
 		if (cbor_decode(reader, item, 0, 0) == CBOR_BREAK) {
+			if (parent && parent->size == (size_t)
+					CBOR_INDEFINITE_VALUE) {
+				i++;
+			}
 			break;
 		}
 
@@ -105,9 +118,8 @@ static size_t iterate_each(const cbor_reader_t *reader,
 	return i + offset;
 }
 
-bool cbor_unmarshal(cbor_reader_t *reader,
-		const struct cbor_parser *parsers, size_t nr_parsers,
-		const void *msg, size_t msglen, void *arg)
+bool cbor_unmarshal(cbor_reader_t *reader, const struct cbor_parser *parsers,
+		size_t nr_parsers, const void *msg, size_t msglen, void *arg)
 {
 	size_t n;
 	cbor_error_t err = cbor_parse(reader, msg, msglen, &n);
@@ -122,20 +134,19 @@ bool cbor_unmarshal(cbor_reader_t *reader,
 		.arg = arg,
 	};
 
-	iterate_each(reader, reader->items, n, 0, parse_item, &ctx);
+	iterate_each(reader, reader->items, n, n, 0, parse_item, &ctx);
 
 	return true;
 }
 
-size_t cbor_iterate(const cbor_reader_t *reader,
-		    const cbor_item_t *parent,
-		    void (*callback_each)(const cbor_reader_t *reader,
-			    const cbor_item_t *item, const cbor_item_t *parent,
-			    void *arg),
-		    void *arg)
+size_t cbor_iterate(const cbor_reader_t *reader, const cbor_item_t *parent,
+		void (*callback_each)(const cbor_reader_t *reader,
+				const cbor_item_t *item,
+				const cbor_item_t *parent, void *arg),
+		void *arg)
 {
 	return iterate_each(reader, reader->items, reader->itemidx,
-			parent, callback_each, arg);
+			reader->itemidx, parent, callback_each, arg);
 }
 
 const char *cbor_stringify_error(cbor_error_t err)

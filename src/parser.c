@@ -91,9 +91,11 @@ static cbor_error_t parse(struct parser_context *ctx, size_t maxitems,
 	cbor_error_t err = CBOR_SUCCESS;
 	size_t i;
 
-	if (++ctx->recursion_depth > CBOR_RECURSION_MAX_LEVEL) {
+	if (ctx->recursion_depth >= CBOR_RECURSION_MAX_LEVEL) {
 		return CBOR_EXCESSIVE;
 	}
+
+	ctx->recursion_depth++;
 
 	for (i = 0; i < maxitems &&
 			ctx->reader->itemidx < ctx->reader->maxitems &&

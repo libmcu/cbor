@@ -31,7 +31,10 @@ cbor_error_t cbor_parse(cbor_reader_t *reader, void const *msg, size_t msgsize,
  *
  * @param[in] msg CBOR encoded message
  * @param[in] msgsize the @p msg size in bytes
- * @param[out] nitems_counted the number of items counted gets stored if not null
+ * @param[out] nitems_counted the number of items counted gets stored
+ *             if not null. This value is written even when the return code
+ *             is an error, and then indicates the number of items counted
+ *             before the parser stopped.
  *
  * @return a code of @ref cbor_error_t
  */
