@@ -244,3 +244,38 @@ TEST(ParserCount,
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_count_items(msg, sizeof(msg), &n));
 	LONGS_EQUAL(6, n);
 }
+
+/* Regression tests: BREAK byte inside a definite-length container must be
+ * treated as CBOR_ILLEGAL, not propagated as CBOR_BREAK to the caller. */
+
+TEST(ParserCount,
+     ShouldReturnIllegal_WhenDefiniteArrayContainsBreakByte)
+{
+	/* [1] encoded as 0x81 but with 0xff (BREAK) as the sole item */
+	uint8_t msg[] = { 0x81, 0xff };
+	cbor_reader_t reader;
+	cbor_item_t items[4];
+	size_t n = 0;
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, msg, sizeof(msg), &n));
+
+	n = 0;
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
+}
+
+TEST(ParserCount,
+     ShouldReturnIllegal_WhenDefiniteMapContainsBreakByte)
+{
+	/* {1: ?} encoded as 0xa1 but with 0xff (BREAK) as the first key */
+	uint8_t msg[] = { 0xa1, 0xff };
+	cbor_reader_t reader;
+	cbor_item_t items[4];
+	size_t n = 0;
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, msg, sizeof(msg), &n));
+
+	n = 0;
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
+}

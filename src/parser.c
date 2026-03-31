@@ -57,7 +57,7 @@ static bool has_valid_following_bytes(const struct parser_context *ctx,
 	}
 
 	if ((ctx->following_bytes + 1u)
-			> ctx->reader->msgsize - ctx->reader->msgidx) {
+			> (ctx->reader->msgsize - ctx->reader->msgidx)) {
 		*err = CBOR_ILLEGAL;
 		return false;
 	}
@@ -94,10 +94,11 @@ static bool should_stop_on_break(uint8_t val, size_t maxitems,
 	return (direct && indefinite) || at_end;
 }
 
-static cbor_error_t parse(struct parser_context *ctx, size_t maxitems,
-		size_t *nitems_parsed)
+static cbor_error_t parse(struct parser_context *ctx,
+		size_t maxitems, size_t *nitems_parsed)
 {
 	cbor_error_t err = CBOR_SUCCESS;
+	uint8_t last_val = 0;
 	size_t i;
 
 	if (ctx->recursion_depth >= CBOR_RECURSION_MAX_LEVEL) {
@@ -109,7 +110,8 @@ static cbor_error_t parse(struct parser_context *ctx, size_t maxitems,
 	for (i = 0; i < maxitems &&
 			ctx->reader->itemidx < ctx->reader->maxitems &&
 			ctx->reader->msgidx < ctx->reader->msgsize; i++) {
-		uint8_t val = ctx->reader->msg[ctx->reader->msgidx];
+		const uint8_t val = ctx->reader->msg[ctx->reader->msgidx];
+		last_val = val;
 		ctx->major_type = get_cbor_major_type(val);
 		ctx->additional_info = get_cbor_additional_info(val);
 		ctx->following_bytes =
@@ -134,7 +136,11 @@ static cbor_error_t parse(struct parser_context *ctx, size_t maxitems,
 
 	ctx->recursion_depth--;
 	if (nitems_parsed != NULL) {
-		*nitems_parsed = i;
+		/* When stopped by BREAK from a sub-container (last_val is not
+		 * the BREAK byte 0xff itself), the item at index i was fully
+		 * parsed, so the actual count is i+1. */
+		*nitems_parsed = (err == CBOR_BREAK && last_val != 0xff)
+				? i + 1 : i;
 	}
 
 	assert(ctx->reader->msgidx <= ctx->reader->msgsize);
@@ -142,8 +148,8 @@ static cbor_error_t parse(struct parser_context *ctx, size_t maxitems,
 	return err;
 }
 
-static void set_item(struct parser_context *ctx, cbor_item_data_t type,
-		     size_t offset, size_t size)
+static void set_item(struct parser_context *ctx,
+		cbor_item_data_t type, size_t offset, size_t size)
 {
 	if (ctx->dry_run) {
 		return;
@@ -217,6 +223,10 @@ static cbor_error_t do_recursive(struct parser_context *ctx)
 	size_t nparsed = 0;
 
 	if ((err = parse(ctx, expected_items, &nparsed)) != CBOR_SUCCESS) {
+		if (err == CBOR_BREAK && len != (size_t)CBOR_INDEFINITE_VALUE
+				&& nparsed < expected_items) {
+			return CBOR_ILLEGAL;
+		}
 		return err;
 	}
 
@@ -263,8 +273,8 @@ static cbor_error_t do_float_and_other(struct parser_context *ctx)
 	return err;
 }
 
-cbor_error_t cbor_parse(cbor_reader_t *reader, void const *msg, size_t msgsize,
-		size_t *nitems_parsed)
+cbor_error_t cbor_parse(cbor_reader_t *reader,
+		void const *msg, size_t msgsize, size_t *nitems_parsed)
 {
 	assert(reader->items != NULL);
 	reader->itemidx = 0;

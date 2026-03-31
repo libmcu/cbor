@@ -75,3 +75,18 @@ TEST(ToolItemCount, ShouldPrintIllegalForTruncatedDefiniteMap)
 
 	STRCMP_CONTAINS("error: CBOR_ILLEGAL", out.c_str());
 }
+
+TEST(ToolItemCount,
+     ShouldPrintBreakWhenTopLevelIndefiniteArrayContainsNestedIndefiniteArray)
+{
+	if (!can_run_item_count_tool()) {
+		return;
+	}
+
+	std::string out = run_command(("python3 \"" + get_script_path() +
+				       "\" --hex \"9f 9f 01 ff 02 ff\"")
+					      .c_str());
+
+	STRCMP_CONTAINS("error: CBOR_BREAK", out.c_str());
+	STRCMP_CONTAINS("items: 6", out.c_str());
+}

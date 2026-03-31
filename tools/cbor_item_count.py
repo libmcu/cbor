@@ -69,8 +69,9 @@ class Counter:
             err = CBOR_SUCCESS
             i = 0
             while self._can_parse_next(maxitems, i):
+                cur = self.data[self.msgidx]
                 err = self._parse_one_item()
-                if self._should_stop_after_item(err, maxitems):
+                if self._should_stop_after_item(err, maxitems, cur):
                     break
 
                 err = CBOR_SUCCESS
@@ -110,9 +111,12 @@ class Counter:
             return self.do_float_and_other(following_bytes)
         return CBOR_ILLEGAL
 
-    def _should_stop_after_item(self, err: str, maxitems: int) -> bool:
+    def _should_stop_after_item(self, err: str, maxitems: int, cur: int) -> bool:
         if err == CBOR_BREAK:
-            return maxitems == CBOR_INDEFINITE_VALUE or self.msgidx == self.msgsize
+            direct_break = cur == 0xFF
+            indefinite = maxitems == CBOR_INDEFINITE_VALUE
+            at_end = self.msgidx == self.msgsize
+            return (direct_break and indefinite) or at_end
         return err != CBOR_SUCCESS
 
     def do_integer(self, following_bytes: int):

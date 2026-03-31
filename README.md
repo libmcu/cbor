@@ -155,7 +155,7 @@ buffer:
 size_t needed_items = 0;
 cbor_error_t err = cbor_count_items(cbor_message, cbor_message_len,
 		&needed_items);
-if (err == CBOR_SUCCESS || err == CBOR_BREAK) {
+if (err == CBOR_SUCCESS) {
 	/* allocate items[needed_items + margin] */
 }
 ```
