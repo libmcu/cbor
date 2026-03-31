@@ -165,11 +165,13 @@ static cbor_error_t do_string(struct parser_context *ctx)
 
 	if (len == (size_t)CBOR_INDEFINITE_VALUE) {
 		ctx->reader->itemidx++;
-		err = parse(ctx, ctx->reader->maxitems - ctx->reader->itemidx);
-		if (err != CBOR_BREAK) {
-			return CBOR_ILLEGAL;
+		err = parse(ctx, (size_t)CBOR_INDEFINITE_VALUE);
+		if (err != CBOR_SUCCESS) {
+			return err;
+		} else if (ctx->reader->itemidx >= ctx->reader->maxitems) {
+			return CBOR_OVERRUN;
 		}
-		return CBOR_BREAK;
+		return CBOR_ILLEGAL;
 	}
 	if (len > ctx->reader->msgsize - ctx->reader->msgidx) {
 		return CBOR_ILLEGAL;
@@ -201,10 +203,15 @@ static cbor_error_t do_recursive(struct parser_context *ctx)
 	ctx->reader->itemidx++;
 
 	err = parse(ctx, expected_items);
-	if (err != CBOR_SUCCESS) {
-		return err;
-	} else if (len == (size_t)CBOR_INDEFINITE_VALUE) {
+	if (len == (size_t)CBOR_INDEFINITE_VALUE) {
+		if (err != CBOR_SUCCESS) {
+			return err;
+		} else if (ctx->reader->itemidx >= ctx->reader->maxitems) {
+			return CBOR_OVERRUN;
+		}
 		return CBOR_ILLEGAL;
+	} else if (err != CBOR_SUCCESS) {
+		return err;
 	}
 
 	if ((ctx->reader->itemidx - nitems_before - 1) < expected_items) {
