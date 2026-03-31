@@ -128,9 +128,15 @@ Each `cbor_item_t` represents one parsed CBOR node (container and leaf both
 count as one item). `cbor_get_item_size()` unit depends on the item type:
 
 * Integer / float / simple value: encoded payload size in bytes
-* Byte/text string: string length in bytes
-* Array: number of child items
-* Map: number of key-value pairs
+* Byte/text string (definite-length): string length in bytes
+* Array (definite-length): number of child items
+* Map (definite-length): number of key-value pairs
+
+For **indefinite-length** strings, arrays, and maps, `cbor_get_item_size()`
+returns the raw CBOR length field, which is the sentinel
+`(size_t)CBOR_INDEFINITE_VALUE`. In that case, the number of child items / key-
+value pairs is not known up front; iterate until the CBOR BREAK marker is
+encountered instead of using `cbor_get_item_size()` as a count.
 
 Example (`0xA2 0x61 0x61 0x01 0x61 0x62 0x02`, equivalent to
 `{"a": 1, "b": 2}`):
@@ -188,6 +194,13 @@ or from file:
 
 ```bash
 python3 tools/cbor_item_count.py --file ./message.cbor
+```
+
+If your build overrides `CBOR_RECURSION_MAX_LEVEL`, pass the same depth to the
+script so it matches parser behavior:
+
+```bash
+python3 tools/cbor_item_count.py --file ./message.cbor --max-depth 16
 ```
 
 The script prints parser-compatible status (`CBOR_SUCCESS`, `CBOR_BREAK`,

@@ -13,7 +13,7 @@ CBOR_EXCESSIVE = "CBOR_EXCESSIVE"
 
 CBOR_INDEFINITE_VALUE = -1
 CBOR_RESERVED_VALUE = -2
-CBOR_RECURSION_MAX_LEVEL = 8
+DEFAULT_CBOR_RECURSION_MAX_LEVEL = 8
 
 
 def get_following_bytes(additional_info: int) -> int:
@@ -27,12 +27,13 @@ def get_following_bytes(additional_info: int) -> int:
 
 
 class Counter:
-    def __init__(self, data: bytes):
+    def __init__(self, data: bytes, max_depth: int = DEFAULT_CBOR_RECURSION_MAX_LEVEL):
         self.data = data
         self.msgsize = len(data)
         self.msgidx = 0
         self.itemidx = 0
         self.recursion_depth = 0
+        self.max_depth = max_depth
 
     def has_valid_following_bytes(self, following_bytes: int):
         if following_bytes == CBOR_RESERVED_VALUE:
@@ -60,7 +61,7 @@ class Counter:
 
     def parse(self, maxitems: int):
         self.recursion_depth += 1
-        if self.recursion_depth > CBOR_RECURSION_MAX_LEVEL:
+        if self.recursion_depth > self.max_depth:
             self.recursion_depth -= 1
             return CBOR_EXCESSIVE
 
@@ -144,8 +145,8 @@ class Counter:
         return CBOR_SUCCESS
 
 
-def count_items(data: bytes):
-    counter = Counter(data)
+def count_items(data: bytes, max_depth: int = DEFAULT_CBOR_RECURSION_MAX_LEVEL):
+    counter = Counter(data, max_depth=max_depth)
     err = counter.parse(counter.msgsize)
     if err == CBOR_SUCCESS and counter.msgidx < counter.msgsize:
         err = CBOR_OVERRUN
@@ -195,7 +196,20 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Count CBOR items from input message")
     parser.add_argument("--hex", help="CBOR bytes as hex string")
     parser.add_argument("--file", help="path to CBOR binary file")
+    parser.add_argument(
+        "--max-depth",
+        type=int,
+        default=DEFAULT_CBOR_RECURSION_MAX_LEVEL,
+        help=(
+            "maximum recursion depth to allow while parsing "
+            f"(default: {DEFAULT_CBOR_RECURSION_MAX_LEVEL})"
+        ),
+    )
     args = parser.parse_args()
+
+    if args.max_depth < 1:
+        print("input error: --max-depth must be >= 1", file=sys.stderr)
+        return 2
 
     try:
         data = load_input(args)
@@ -203,7 +217,7 @@ def main() -> int:
         print(f"input error: {e}", file=sys.stderr)
         return 2
 
-    err, nitems = count_items(data)
+    err, nitems = count_items(data, max_depth=args.max_depth)
     print(f"error: {err}")
     print(f"items: {nitems}")
 
