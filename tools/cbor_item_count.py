@@ -65,42 +65,55 @@ class Counter:
             self.recursion_depth -= 1
             return CBOR_EXCESSIVE
 
-        err = CBOR_SUCCESS
-        i = 0
-        while (maxitems == CBOR_INDEFINITE_VALUE or i < maxitems) and self.msgidx < self.msgsize:
-            val = self.data[self.msgidx]
-            major_type = val >> 5
-            additional_info = val & 0x1F
-            following_bytes = get_following_bytes(additional_info)
-
-            ok, err = self.has_valid_following_bytes(following_bytes)
-            if not ok:
-                break
-
-            if major_type in (0, 1):
-                err = self.do_integer(following_bytes)
-            elif major_type in (2, 3):
-                err = self.do_string(additional_info, following_bytes)
-            elif major_type in (4, 5):
-                err = self.do_recursive(major_type, additional_info, following_bytes)
-            elif major_type == 6:
-                err = CBOR_INVALID
-            elif major_type == 7:
-                err = self.do_float_and_other(following_bytes)
-            else:
-                err = CBOR_ILLEGAL
-
-            if err == CBOR_BREAK:
-                if maxitems == CBOR_INDEFINITE_VALUE or self.msgidx == self.msgsize:
-                    break
-            elif err != CBOR_SUCCESS:
-                break
-
+        try:
             err = CBOR_SUCCESS
-            i += 1
+            i = 0
+            while self._can_parse_next(maxitems, i):
+                err = self._parse_one_item()
+                if self._should_stop_after_item(err, maxitems):
+                    break
 
-        self.recursion_depth -= 1
-        return err
+                err = CBOR_SUCCESS
+                i += 1
+
+            return err
+        finally:
+            self.recursion_depth -= 1
+
+    def _can_parse_next(self, maxitems: int, parsed_items: int) -> bool:
+        limit_ok = maxitems == CBOR_INDEFINITE_VALUE or parsed_items < maxitems
+        return limit_ok and self.msgidx < self.msgsize
+
+    def _parse_one_item(self):
+        val = self.data[self.msgidx]
+        major_type = val >> 5
+        additional_info = val & 0x1F
+        following_bytes = get_following_bytes(additional_info)
+
+        ok, err = self.has_valid_following_bytes(following_bytes)
+        if not ok:
+            return err
+
+        return self._dispatch_parser(major_type, additional_info, following_bytes)
+
+    def _dispatch_parser(self, major_type: int, additional_info: int,
+                         following_bytes: int):
+        if major_type in (0, 1):
+            return self.do_integer(following_bytes)
+        if major_type in (2, 3):
+            return self.do_string(additional_info, following_bytes)
+        if major_type in (4, 5):
+            return self.do_recursive(major_type, additional_info, following_bytes)
+        if major_type == 6:
+            return CBOR_INVALID
+        if major_type == 7:
+            return self.do_float_and_other(following_bytes)
+        return CBOR_ILLEGAL
+
+    def _should_stop_after_item(self, err: str, maxitems: int) -> bool:
+        if err == CBOR_BREAK:
+            return maxitems == CBOR_INDEFINITE_VALUE or self.msgidx == self.msgsize
+        return err != CBOR_SUCCESS
 
     def do_integer(self, following_bytes: int):
         if following_bytes == CBOR_INDEFINITE_VALUE:

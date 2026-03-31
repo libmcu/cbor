@@ -1,16 +1,19 @@
 #include "CppUTest/TestHarness.h"
 
+#include <array>
 #include <cstdlib>
 #include <cstdio>
 #include <string>
 
-#if !defined(CBOR_PROJECT_ROOT)
-#define CBOR_PROJECT_ROOT ".."
+#if defined(CBOR_PROJECT_ROOT)
+static constexpr const char *kProjectRoot = CBOR_PROJECT_ROOT;
+#else
+static constexpr const char *kProjectRoot = "..";
 #endif
 
 static std::string get_script_path(void)
 {
-	return std::string(CBOR_PROJECT_ROOT) + "/tools/cbor_item_count.py";
+	return std::string(kProjectRoot) + "/tools/cbor_item_count.py";
 }
 
 static bool can_run_item_count_tool(void)
@@ -20,7 +23,7 @@ static bool can_run_item_count_tool(void)
 	}
 
 	FILE *fp = std::fopen(get_script_path().c_str(), "r");
-	if (fp == NULL) {
+	if (fp == nullptr) {
 		return false;
 	}
 
@@ -31,12 +34,13 @@ static bool can_run_item_count_tool(void)
 static std::string run_command(const char *command)
 {
 	std::string output;
-	char buffer[256];
+	std::array<char, 256> buffer{};
 	FILE *pipe = popen(command, "r");
 
-	CHECK_TEXT(pipe != NULL, "popen failed");
-	while (fgets(buffer, (int)sizeof(buffer), pipe) != NULL) {
-		output += buffer;
+	CHECK_TEXT(pipe != nullptr, "popen failed");
+	while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) !=
+	       nullptr) {
+		output += buffer.data();
 	}
 	pclose(pipe);
 

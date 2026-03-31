@@ -8,43 +8,56 @@
 #include "CppUTest/TestHarness_c.h"
 #include "CppUTestExt/MockSupport.h"
 
+#include <cstdint>
+#include <cstring>
+#include <iterator>
+
 #include "cbor/cbor.h"
 
-static void parse_cert(const cbor_reader_t *reader,
+static const char *get_mock_name(const struct cbor_parser *parser)
+{
+	if (parser->keylen == 11 &&
+	    std::memcmp(parser->key, "certificate", parser->keylen) == 0) {
+		return "parse_cert";
+	}
+
+	if (parser->keylen == 10 &&
+	    std::memcmp(parser->key, "privateKey", parser->keylen) == 0) {
+		return "parse_key";
+	}
+
+	if (parser->keylen == 7 &&
+	    (std::memcmp(parser->key, "strkey1", parser->keylen) == 0 ||
+	     std::memcmp(parser->key, "strkey2", parser->keylen) == 0)) {
+		return "parse_strkey";
+	}
+
+	if ((std::intptr_t)parser->key == 1 ||
+	    (std::intptr_t)parser->key == 2) {
+		return "parse_intkey";
+	}
+
+	return "parse_unknown";
+}
+
+static void parse_item(const cbor_reader_t *reader,
 		       const struct cbor_parser *parser,
 		       const cbor_item_t *item, void *arg)
 {
-	mock().actualCall(__func__);
-}
+	(void)reader;
+	(void)item;
+	(void)arg;
 
-static void parse_key(const cbor_reader_t *reader,
-		      const struct cbor_parser *parser, const cbor_item_t *item,
-		      void *arg)
-{
-	mock().actualCall(__func__);
-}
-
-static void parse_strkey(const cbor_reader_t *reader,
-			 const struct cbor_parser *parser,
-			 const cbor_item_t *item, void *arg)
-{
-	mock().actualCall(__func__);
-}
-
-static void parse_intkey(const cbor_reader_t *reader,
-			 const struct cbor_parser *parser,
-			 const cbor_item_t *item, void *arg)
-{
-	mock().actualCall(__func__);
+	mock().actualCall(get_mock_name(parser));
 }
 
 static const struct cbor_parser parsers[] = {
-	{ .key = "certificate", .keylen = 11, .run = parse_cert },
-	{ .key = "privateKey", .keylen = 10, .run = parse_key },
-	{ .key = "strkey1", .keylen = 7, .run = parse_strkey },
-	{ .key = (const void *)1, .run = parse_intkey },
-	{ .key = "strkey2", .keylen = 7, .run = parse_strkey },
-	{ .key = (const void *)2, .run = parse_intkey },
+	{ .key = "certificate", .keylen = 11, .run = parse_item },
+	{ .key = "privateKey", .keylen = 10, .run = parse_item },
+	{ .key = "strkey1", .keylen = 7, .run = parse_item },
+	{ .key = (const void *)1, .run = parse_item },
+	{ .key = "strkey2", .keylen = 7, .run = parse_item },
+	{ .key = (const void *)2, .run = parse_item },
 };
 
 static void count_scalar_item(const cbor_reader_t *reader,
@@ -55,7 +68,7 @@ static void count_scalar_item(const cbor_reader_t *reader,
 	(void)item;
 	(void)parent;
 
-	size_t *count = (size_t *)arg;
+	auto *count = static_cast<size_t *>(arg);
 	(*count)++;
 }
 
@@ -66,8 +79,7 @@ TEST_GROUP(Helper)
 
 	void setup(void)
 	{
-		cbor_reader_init(&reader, items,
-				 sizeof(items) / sizeof(*items));
+		cbor_reader_init(&reader, items, std::size(items));
 	}
 	void teardown(void)
 	{
@@ -90,7 +102,7 @@ TEST(Helper, unmarshal_ShouldReturnTrue_WhenSucceed)
 	mock().expectOneCall("parse_key");
 
 	cbor_unmarshal(&reader, parsers, sizeof(parsers) / sizeof(*parsers),
-		       msg, sizeof(msg), 0);
+		       msg, sizeof(msg), nullptr);
 }
 
 TEST(Helper, unmarshal_ShouldReturnFalse_WhenInvalidMessageGiven)
@@ -104,7 +116,7 @@ TEST(Helper, unmarshal_ShouldReturnFalse_WhenInvalidMessageGiven)
 
 	LONGS_EQUAL(false, cbor_unmarshal(&reader, parsers,
 					  sizeof(parsers) / sizeof(*parsers),
-					  msg, sizeof(msg), 0));
+					  msg, sizeof(msg), nullptr));
 }
 
 TEST(Helper, ShouldUnmarshal_WhenBothOfStrKeyAndIntKeyGiven)
@@ -121,7 +133,7 @@ TEST(Helper, ShouldUnmarshal_WhenBothOfStrKeyAndIntKeyGiven)
 
 	LONGS_EQUAL(true, cbor_unmarshal(&reader, parsers,
 					 sizeof(parsers) / sizeof(*parsers),
-					 msg, sizeof(msg), 0));
+					 msg, sizeof(msg), nullptr));
 }
 
 TEST(Helper, iterate_ShouldKeepSiblingAfterTopLevelIndefiniteContainer)
@@ -132,7 +144,7 @@ TEST(Helper, iterate_ShouldKeepSiblingAfterTopLevelIndefiniteContainer)
 
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
 	LONGS_EQUAL(4, n);
-	(void)cbor_iterate(&reader, NULL, count_scalar_item, &scalar_count);
+	(void)cbor_iterate(&reader, nullptr, count_scalar_item, &scalar_count);
 	LONGS_EQUAL(2, scalar_count);
 }
 
@@ -144,7 +156,7 @@ TEST(Helper, iterate_ShouldHandleNestedIndefiniteContainerAndSibling)
 
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
 	LONGS_EQUAL(5, n);
-	(void)cbor_iterate(&reader, NULL, count_scalar_item, &scalar_count);
+	(void)cbor_iterate(&reader, nullptr, count_scalar_item, &scalar_count);
 	LONGS_EQUAL(2, scalar_count);
 }
 
@@ -156,6 +168,6 @@ TEST(Helper, iterate_ShouldKeepSiblingAfterIndefiniteStringInContainer)
 
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
 	LONGS_EQUAL(5, n);
-	(void)cbor_iterate(&reader, NULL, count_scalar_item, &scalar_count);
+	(void)cbor_iterate(&reader, nullptr, count_scalar_item, &scalar_count);
 	LONGS_EQUAL(3, scalar_count);
 }
