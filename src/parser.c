@@ -159,12 +159,17 @@ static cbor_error_t do_integer(struct parser_context *ctx)
 static cbor_error_t do_string(struct parser_context *ctx)
 {
 	size_t len = go_get_item_length(ctx);
+	cbor_error_t err;
 
 	set_item(ctx, CBOR_ITEM_STRING, ctx->reader->msgidx, len);
 
 	if (len == (size_t)CBOR_INDEFINITE_VALUE) {
 		ctx->reader->itemidx++;
-		return parse(ctx, ctx->reader->maxitems - ctx->reader->itemidx);
+		err = parse(ctx, ctx->reader->maxitems - ctx->reader->itemidx);
+		if (err != CBOR_BREAK) {
+			return CBOR_ILLEGAL;
+		}
+		return CBOR_BREAK;
 	}
 	if (len > ctx->reader->msgsize - ctx->reader->msgidx) {
 		return CBOR_ILLEGAL;
@@ -179,17 +184,37 @@ static cbor_error_t do_string(struct parser_context *ctx)
 static cbor_error_t do_recursive(struct parser_context *ctx)
 {
 	size_t len = go_get_item_length(ctx);
+	size_t expected_items = len;
+	size_t nitems_before = ctx->reader->itemidx;
+	cbor_error_t err;
 
 	set_item(ctx, (cbor_item_data_t)(ctx->major_type - 1),
 			ctx->reader->msgidx, len);
-	if (len != (size_t)CBOR_INDEFINITE_VALUE &&
-			len > ctx->reader->msgsize - ctx->reader->msgidx) {
-		return CBOR_ILLEGAL;
+	if (len != (size_t)CBOR_INDEFINITE_VALUE && (cbor_item_data_t)
+			(ctx->major_type - 1) == CBOR_ITEM_MAP) {
+		if (len > SIZE_MAX / 2) {
+			return CBOR_ILLEGAL;
+		}
+		expected_items = len * 2;
 	}
 
 	ctx->reader->itemidx++;
 
-	return parse(ctx, len);
+	err = parse(ctx, expected_items);
+	if (err != CBOR_SUCCESS) {
+		return err;
+	} else if (len == (size_t)CBOR_INDEFINITE_VALUE) {
+		return CBOR_ILLEGAL;
+	}
+
+	if ((ctx->reader->itemidx - nitems_before - 1) < expected_items) {
+		if (ctx->reader->itemidx >= ctx->reader->maxitems) {
+			return CBOR_OVERRUN;
+		}
+		return CBOR_ILLEGAL;
+	}
+
+	return CBOR_SUCCESS;
 }
 
 /* TODO: Implement tag */
@@ -270,7 +295,11 @@ cbor_error_t cbor_count_items(void const *msg, size_t msgsize,
 		.dry_run = true,
 	};
 
-	cbor_error_t err = parse(&ctx, reader.maxitems);
+	/* Use reader.msgsize as top-level maxitems in dry-run counting.
+	 * reader.maxitems == (size_t)-1 conflicts with BREAK sentinel behavior
+	 * and can terminate early. msgsize is a safe upper bound; long-term,
+	 * split maxitems and break policy in parse(). */
+	cbor_error_t err = parse(&ctx, reader.msgsize);
 
 	if (err == CBOR_SUCCESS && reader.msgidx < reader.msgsize) {
 		err = CBOR_OVERRUN;

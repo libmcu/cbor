@@ -38,3 +38,39 @@ TEST(ParserCount, ShouldReturnIllegal_WhenMessageIsIncomplete)
 	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
 	LONGS_EQUAL(0, n);
 }
+
+TEST(ParserCount, ShouldContinueCountingAfterBreak_WhenMoreTopLevelItemsExist)
+{
+	uint8_t msg[] = { 0x9f, 0x01, 0xff, 0x02 };
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_count_items(msg, sizeof(msg), &n));
+	LONGS_EQUAL(4, n);
+}
+
+TEST(ParserCount, ShouldReturnIllegal_WhenDefiniteArrayIsTruncated)
+{
+	uint8_t msg[] = { 0x82, 0x01 };
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
+	LONGS_EQUAL(2, n);
+}
+
+TEST(ParserCount, ShouldReturnIllegal_WhenDefiniteMapIsTruncated)
+{
+	uint8_t msg[] = { 0xa1, 0x01 };
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
+	LONGS_EQUAL(2, n);
+}
+
+TEST(ParserCount, ShouldReturnIllegal_WhenIndefiniteArrayMissingBreak)
+{
+	uint8_t msg[] = { 0x9f, 0x01 };
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
+	LONGS_EQUAL(2, n);
+}
