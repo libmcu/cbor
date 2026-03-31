@@ -146,7 +146,7 @@ class Counter:
 
 def count_items(data: bytes):
     counter = Counter(data)
-    err = counter.parse(CBOR_INDEFINITE_VALUE)
+    err = counter.parse(counter.msgsize)
     if err == CBOR_SUCCESS and counter.msgidx < counter.msgsize:
         err = CBOR_OVERRUN
     return err, counter.itemidx
