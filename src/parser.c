@@ -85,6 +85,15 @@ static size_t go_get_item_length(struct parser_context *ctx)
 	return (size_t)len;
 }
 
+static bool should_stop_on_break(uint8_t val, size_t maxitems,
+		const struct parser_context *ctx)
+{
+	const bool direct = (val == 0xff); /* BREAK(major 7, add-info 31) */
+	const bool indefinite = (maxitems == (size_t)CBOR_INDEFINITE_VALUE);
+	const bool at_end = (ctx->reader->msgidx == ctx->reader->msgsize);
+	return (direct && indefinite) || at_end;
+}
+
 static cbor_error_t parse(struct parser_context *ctx, size_t maxitems,
 		size_t *nitems_parsed)
 {
@@ -113,9 +122,7 @@ static cbor_error_t parse(struct parser_context *ctx, size_t maxitems,
 		err = parsers[ctx->major_type](ctx);
 
 		if (err == CBOR_BREAK) {
-			if ((maxitems == (size_t)CBOR_INDEFINITE_VALUE) ||
-					(ctx->reader->msgidx ==
-						ctx->reader->msgsize)) {
+			if (should_stop_on_break(val, maxitems, ctx)) {
 				break;
 			}
 		} else if (err != CBOR_SUCCESS) {
@@ -301,12 +308,13 @@ cbor_error_t cbor_count_items(void const *msg, size_t msgsize,
 		.dry_run = true,
 	};
 
-	/* Use reader.msgsize as top-level maxitems in dry-run counting.
-	 * reader.maxitems == (size_t)-1 conflicts with BREAK sentinel behavior
-	 * and can terminate early. msgsize is a safe upper bound; long-term,
-	 * split maxitems and break policy in parse(). */
 	cbor_error_t err = parse(&ctx, reader.msgsize, NULL);
 
+	/* CBOR_BREAK means the message contained indefinite-length items;
+	 * that is valid for counting purposes. */
+	if (err == CBOR_BREAK) {
+		err = CBOR_SUCCESS;
+	}
 	if (err == CBOR_SUCCESS && reader.msgidx < reader.msgsize) {
 		err = CBOR_OVERRUN;
 	}

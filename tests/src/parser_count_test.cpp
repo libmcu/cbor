@@ -132,3 +132,115 @@ TEST(ParserCount,
 	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
 	LONGS_EQUAL(4, n);
 }
+
+/* Regression tests: nested indefinite container BREAK must not terminate the
+ * outer indefinite container prematurely. */
+
+TEST(ParserCount,
+     ShouldParseSuccessfully_WhenIndefiniteArrayContainsIndefiniteTextString)
+{
+	/* [_ (_ "a") 2 ]
+	 * 9f         -- indefinite array
+	 *   7f       -- indefinite text string
+	 *     61 61  -- chunk "a"
+	 *     ff     -- BREAK (inner string)
+	 *   02       -- integer 2
+	 *   ff       -- BREAK (outer array)
+	 */
+	uint8_t msg[] = { 0x9f, 0x7f, 0x61, 0x61, 0xff, 0x02, 0xff };
+	cbor_reader_t reader;
+	cbor_item_t items[16];
+	size_t n = 0;
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	/* cbor_parse returns CBOR_BREAK when the top-level container is
+	 * indefinite-length; inner indefinite strings must not terminate it
+	 * prematurely. */
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, msg, sizeof(msg), &n));
+	LONGS_EQUAL(6, n);
+}
+
+TEST(ParserCount,
+     ShouldCountSuccessfully_WhenIndefiniteArrayContainsIndefiniteTextString)
+{
+	/* [_ (_ "a") 2 ] */
+	uint8_t msg[] = { 0x9f, 0x7f, 0x61, 0x61, 0xff, 0x02, 0xff };
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_count_items(msg, sizeof(msg), &n));
+	LONGS_EQUAL(6, n);
+}
+
+TEST(ParserCount,
+     ShouldParseSuccessfully_WhenIndefiniteMapContainsIndefiniteByteString)
+{
+	/* {_ "a" h'01'(indef) "b" 2 }
+	 * bf            -- indefinite map
+	 *   61 61       -- key "a"
+	 *   5f          -- indefinite byte string
+	 *     41 01     -- chunk h'01'
+	 *     ff        -- BREAK (inner byte string)
+	 *   61 62       -- key "b"
+	 *   02          -- value 2
+	 *   ff          -- BREAK (outer map)
+	 */
+	uint8_t msg[] = {
+		0xbf, 0x61, 0x61, 0x5f, 0x41, 0x01, 0xff,
+		0x61, 0x62, 0x02, 0xff
+	};
+	cbor_reader_t reader;
+	cbor_item_t items[16];
+	size_t n = 0;
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	/* cbor_parse returns CBOR_BREAK for indefinite-length top container. */
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, msg, sizeof(msg), &n));
+	LONGS_EQUAL(8, n);
+}
+
+TEST(ParserCount,
+     ShouldCountSuccessfully_WhenIndefiniteMapContainsIndefiniteByteString)
+{
+	/* {_ "a" h'01'(indef) "b" 2 } */
+	uint8_t msg[] = {
+		0xbf, 0x61, 0x61, 0x5f, 0x41, 0x01, 0xff,
+		0x61, 0x62, 0x02, 0xff
+	};
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_count_items(msg, sizeof(msg), &n));
+	LONGS_EQUAL(8, n);
+}
+
+TEST(ParserCount,
+     ShouldParseSuccessfully_WhenIndefiniteArrayContainsNestedIndefiniteArray)
+{
+	/* [_ [_ 1] 2 ]
+	 * 9f      -- outer indefinite array
+	 *   9f    -- inner indefinite array
+	 *     01  -- integer 1
+	 *     ff  -- BREAK (inner array)
+	 *   02    -- integer 2
+	 *   ff    -- BREAK (outer array)
+	 */
+	uint8_t msg[] = { 0x9f, 0x9f, 0x01, 0xff, 0x02, 0xff };
+	cbor_reader_t reader;
+	cbor_item_t items[16];
+	size_t n = 0;
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	/* cbor_parse returns CBOR_BREAK for indefinite-length top container. */
+	LONGS_EQUAL(CBOR_BREAK, cbor_parse(&reader, msg, sizeof(msg), &n));
+	LONGS_EQUAL(6, n);
+}
+
+TEST(ParserCount,
+     ShouldCountSuccessfully_WhenIndefiniteArrayContainsNestedIndefiniteArray)
+{
+	/* [_ [_ 1] 2 ] */
+	uint8_t msg[] = { 0x9f, 0x9f, 0x01, 0xff, 0x02, 0xff };
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_count_items(msg, sizeof(msg), &n));
+	LONGS_EQUAL(6, n);
+}
