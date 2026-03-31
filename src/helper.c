@@ -69,42 +69,42 @@ static void parse_item(const cbor_reader_t *reader, const cbor_item_t *item,
 	}
 }
 
-static bool is_recursive_iteration_needed(const cbor_item_t *item,
-		size_t remaining_nodes, size_t *len,
-		bool *call_callback_before_recurse, bool *stop_iteration)
-{
-	*call_callback_before_recurse = false;
-	*stop_iteration = false;
+typedef enum {
+	ITER_LEAF,                   /* not a container; decode and callback */
+	ITER_RECURSE,                /* container; recurse into children */
+	ITER_RECURSE_CALLBACK_FIRST, /* indefinite string; callback then recurse */
+	ITER_STOP,                   /* MAP size overflow; abort iteration */
+} iter_action_t;
 
+static iter_action_t get_iter_action(const cbor_item_t *item,
+		size_t remaining_nodes, size_t *len)
+{
 	if (item->type == CBOR_ITEM_STRING &&
 			item->size == (size_t)CBOR_INDEFINITE_VALUE) {
 		*len = remaining_nodes;
-		*call_callback_before_recurse = true;
-		return true;
+		return ITER_RECURSE_CALLBACK_FIRST;
 	}
 
 	if (item->type != CBOR_ITEM_MAP && item->type != CBOR_ITEM_ARRAY) {
-		return false;
+		return ITER_LEAF;
 	}
 
 	if (item->size == (size_t)CBOR_INDEFINITE_VALUE) {
 		*len = remaining_nodes;
-		return true;
+		return ITER_RECURSE;
 	}
 
 	if (item->type == CBOR_ITEM_MAP) {
 		if (item->size > SIZE_MAX / 2) {
-			*stop_iteration = true;
-			return false;
+			return ITER_STOP;
 		}
 
 		*len = item->size * 2;
-		return true;
+		return ITER_RECURSE;
 	}
 
 	*len = item->size;
-
-	return true;
+	return ITER_RECURSE;
 }
 
 static size_t iterate_each(const cbor_reader_t *reader,
@@ -115,37 +115,35 @@ static size_t iterate_each(const cbor_reader_t *reader,
 				const cbor_item_t *parent, void *arg),
 		void *arg)
 {
-	size_t offset = 0;
+	size_t extra = 0;
 	size_t i = 0;
 
 	for (i = 0; i < nr_items; i++) {
-		if ((i + offset) >= max_nodes) {
+		if ((i + extra) >= max_nodes) {
 			break;
 		}
-		const cbor_item_t *item = &items[i + offset];
-		size_t remaining_nodes = max_nodes - (i + offset + 1);
+		const cbor_item_t *item = &items[i + extra];
+		size_t remaining_nodes = max_nodes - (i + extra + 1);
 		size_t len;
-		bool call_callback_before_recurse;
-		bool stop_iteration;
 
-		if (is_recursive_iteration_needed(item, remaining_nodes, &len,
-				&call_callback_before_recurse,
-				&stop_iteration)) {
-			if (call_callback_before_recurse) {
-				(*callback_each)(reader, item, parent, arg);
-			}
-
-			offset += iterate_each(reader, item + 1, len,
+		switch (get_iter_action(item, remaining_nodes, &len)) {
+		case ITER_RECURSE_CALLBACK_FIRST:
+			(*callback_each)(reader, item, parent, arg);
+			/* fall through */
+		case ITER_RECURSE:
+			extra += iterate_each(reader, item + 1, len,
 					remaining_nodes, item,
 					callback_each, arg);
 			continue;
-		}
-
-		if (stop_iteration) {
+		case ITER_STOP:
+			return i + extra;
+		case ITER_LEAF:
+		default:
 			break;
 		}
 
 		if (cbor_decode(reader, item, 0, 0) == CBOR_BREAK) {
+			/* account for the BREAK token in the consumed count */
 			if (parent && parent->size == (size_t)
 					CBOR_INDEFINITE_VALUE) {
 				i++;
@@ -156,7 +154,7 @@ static size_t iterate_each(const cbor_reader_t *reader,
 		(*callback_each)(reader, item, parent, arg);
 	}
 
-	return i + offset;
+	return i + extra;
 }
 
 bool cbor_unmarshal(cbor_reader_t *reader, const struct cbor_parser *parsers,
