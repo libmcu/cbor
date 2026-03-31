@@ -69,11 +69,50 @@ static void parse_item(const cbor_reader_t *reader, const cbor_item_t *item,
 	}
 }
 
+static bool is_recursive_iteration_needed(const cbor_item_t *item,
+		size_t remaining_nodes, size_t *len,
+		bool *call_callback_before_recurse, bool *stop_iteration)
+{
+	*call_callback_before_recurse = false;
+	*stop_iteration = false;
+
+	if (item->type == CBOR_ITEM_STRING &&
+			item->size == (size_t)CBOR_INDEFINITE_VALUE) {
+		*len = remaining_nodes;
+		*call_callback_before_recurse = true;
+		return true;
+	}
+
+	if (item->type != CBOR_ITEM_MAP && item->type != CBOR_ITEM_ARRAY) {
+		return false;
+	}
+
+	if (item->size == (size_t)CBOR_INDEFINITE_VALUE) {
+		*len = remaining_nodes;
+		return true;
+	}
+
+	if (item->type == CBOR_ITEM_MAP) {
+		if (item->size > SIZE_MAX / 2) {
+			*stop_iteration = true;
+			return false;
+		}
+
+		*len = item->size * 2;
+		return true;
+	}
+
+	*len = item->size;
+
+	return true;
+}
+
 static size_t iterate_each(const cbor_reader_t *reader,
 		const cbor_item_t *items, size_t nr_items, size_t max_nodes,
-		const cbor_item_t *parent, void (*callback_each)
-			(const cbor_reader_t *reader, const cbor_item_t *item,
-				   const cbor_item_t *parent, void *arg),
+		const cbor_item_t *parent,
+		void (*callback_each)(const cbor_reader_t *reader,
+				const cbor_item_t *item,
+				const cbor_item_t *parent, void *arg),
 		void *arg)
 {
 	size_t offset = 0;
@@ -84,24 +123,26 @@ static size_t iterate_each(const cbor_reader_t *reader,
 			break;
 		}
 		const cbor_item_t *item = &items[i + offset];
+		size_t remaining_nodes = max_nodes - (i + offset + 1);
+		size_t len;
+		bool call_callback_before_recurse;
+		bool stop_iteration;
 
-		if (item->type == CBOR_ITEM_MAP ||
-				item->type == CBOR_ITEM_ARRAY) {
-			size_t len = item->size;
-
-			if (item->size == (size_t)CBOR_INDEFINITE_VALUE) {
-				len = max_nodes - (i + offset + 1);
-			} else if (item->type == CBOR_ITEM_MAP) {
-				if (item->size > SIZE_MAX / 2) {
-					break;
-				}
-				len *= 2;
+		if (is_recursive_iteration_needed(item, remaining_nodes, &len,
+				&call_callback_before_recurse,
+				&stop_iteration)) {
+			if (call_callback_before_recurse) {
+				(*callback_each)(reader, item, parent, arg);
 			}
 
 			offset += iterate_each(reader, item + 1, len,
-					max_nodes - (i + offset + 1), item,
+					remaining_nodes, item,
 					callback_each, arg);
 			continue;
+		}
+
+		if (stop_iteration) {
+			break;
 		}
 
 		if (cbor_decode(reader, item, 0, 0) == CBOR_BREAK) {

@@ -137,8 +137,9 @@ size_t cbor_get_item_size(cbor_item_t const *item);
  *
  * @param[in] additional_info low-order 5-bit additional information
  *
- * @return number of following bytes, or sentinel values defined by
- *         `CBOR_INDEFINITE_VALUE`/`CBOR_RESERVED_VALUE`
+ * @return number of following bytes, or sentinel values returned as
+ *         `(uint8_t)CBOR_INDEFINITE_VALUE` / `(uint8_t)CBOR_RESERVED_VALUE`
+ *         (currently `0xFF` / `0xFE`)
  */
 uint8_t cbor_get_following_bytes(uint8_t additional_info);
 

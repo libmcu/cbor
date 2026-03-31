@@ -147,3 +147,15 @@ TEST(Helper, iterate_ShouldHandleNestedIndefiniteContainerAndSibling)
 	(void)cbor_iterate(&reader, NULL, count_scalar_item, &scalar_count);
 	LONGS_EQUAL(2, scalar_count);
 }
+
+TEST(Helper, iterate_ShouldKeepSiblingAfterIndefiniteStringInContainer)
+{
+	uint8_t msg[] = { 0x82, 0x7f, 0x61, 0x61, 0xff, 0x02 };
+	size_t n = 0;
+	size_t scalar_count = 0;
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
+	LONGS_EQUAL(5, n);
+	(void)cbor_iterate(&reader, NULL, count_scalar_item, &scalar_count);
+	LONGS_EQUAL(3, scalar_count);
+}
