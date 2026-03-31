@@ -184,10 +184,8 @@ TEST(ParserCount,
 	 *   02          -- value 2
 	 *   ff          -- BREAK (outer map)
 	 */
-	uint8_t msg[] = {
-		0xbf, 0x61, 0x61, 0x5f, 0x41, 0x01, 0xff,
-		0x61, 0x62, 0x02, 0xff
-	};
+	uint8_t msg[] = { 0xbf, 0x61, 0x61, 0x5f, 0x41, 0x01,
+			  0xff, 0x61, 0x62, 0x02, 0xff };
 	cbor_reader_t reader;
 	cbor_item_t items[16];
 	size_t n = 0;
@@ -202,10 +200,8 @@ TEST(ParserCount,
      ShouldCountSuccessfully_WhenIndefiniteMapContainsIndefiniteByteString)
 {
 	/* {_ "a" h'01'(indef) "b" 2 } */
-	uint8_t msg[] = {
-		0xbf, 0x61, 0x61, 0x5f, 0x41, 0x01, 0xff,
-		0x61, 0x62, 0x02, 0xff
-	};
+	uint8_t msg[] = { 0xbf, 0x61, 0x61, 0x5f, 0x41, 0x01,
+			  0xff, 0x61, 0x62, 0x02, 0xff };
 	size_t n = 0;
 
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_count_items(msg, sizeof(msg), &n));
@@ -248,8 +244,7 @@ TEST(ParserCount,
 /* Regression tests: BREAK byte inside a definite-length container must be
  * treated as CBOR_ILLEGAL, not propagated as CBOR_BREAK to the caller. */
 
-TEST(ParserCount,
-     ShouldReturnIllegal_WhenDefiniteArrayContainsBreakByte)
+TEST(ParserCount, ShouldReturnIllegal_WhenDefiniteArrayContainsBreakByte)
 {
 	/* [1] encoded as 0x81 but with 0xff (BREAK) as the sole item */
 	uint8_t msg[] = { 0x81, 0xff };
@@ -264,13 +259,41 @@ TEST(ParserCount,
 	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
 }
 
-TEST(ParserCount,
-     ShouldReturnIllegal_WhenDefiniteMapContainsBreakByte)
+TEST(ParserCount, ShouldReturnIllegal_WhenDefiniteMapContainsBreakByte)
 {
 	/* {1: ?} encoded as 0xa1 but with 0xff (BREAK) as the first key */
 	uint8_t msg[] = { 0xa1, 0xff };
 	cbor_reader_t reader;
 	cbor_item_t items[4];
+	size_t n = 0;
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, msg, sizeof(msg), &n));
+
+	n = 0;
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
+}
+
+TEST(ParserCount,
+     ShouldReturnIllegal_WhenDefiniteArrayContainsBreakBeforeLastItem)
+{
+	uint8_t msg[] = { 0x82, 0xff, 0x01 };
+	cbor_reader_t reader;
+	cbor_item_t items[8];
+	size_t n = 0;
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_parse(&reader, msg, sizeof(msg), &n));
+
+	n = 0;
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_count_items(msg, sizeof(msg), &n));
+}
+
+TEST(ParserCount, ShouldReturnIllegal_WhenTopLevelBreakHasTrailingItem)
+{
+	uint8_t msg[] = { 0xff, 0x01 };
+	cbor_reader_t reader;
+	cbor_item_t items[8];
 	size_t n = 0;
 
 	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));

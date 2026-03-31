@@ -94,8 +94,21 @@ static bool should_stop_on_break(uint8_t val, size_t maxitems,
 	return (direct && indefinite) || at_end;
 }
 
-static cbor_error_t parse(struct parser_context *ctx,
-		size_t maxitems, size_t *nitems_parsed)
+static bool is_top_level_break_at_end(const struct parser_context *ctx)
+{
+	return ctx->recursion_depth == 1 &&
+		ctx->reader->msgidx == ctx->reader->msgsize;
+}
+
+static bool is_illegal_break(uint8_t val, size_t maxitems,
+			     const struct parser_context *ctx)
+{
+	return val == 0xff && maxitems != (size_t)CBOR_INDEFINITE_VALUE &&
+		!is_top_level_break_at_end(ctx);
+}
+
+static cbor_error_t parse(struct parser_context *ctx, size_t maxitems,
+			  size_t *nitems_parsed)
 {
 	cbor_error_t err = CBOR_SUCCESS;
 	uint8_t last_val = 0;
@@ -124,7 +137,10 @@ static cbor_error_t parse(struct parser_context *ctx,
 		err = parsers[ctx->major_type](ctx);
 
 		if (err == CBOR_BREAK) {
-			if (should_stop_on_break(val, maxitems, ctx)) {
+			if (is_illegal_break(val, maxitems, ctx)) {
+				err = CBOR_ILLEGAL;
+				break;
+			} else if (should_stop_on_break(val, maxitems, ctx)) {
 				break;
 			}
 		} else if (err != CBOR_SUCCESS) {
@@ -139,8 +155,8 @@ static cbor_error_t parse(struct parser_context *ctx,
 		/* When stopped by BREAK from a sub-container (last_val is not
 		 * the BREAK byte 0xff itself), the item at index i was fully
 		 * parsed, so the actual count is i+1. */
-		*nitems_parsed = (err == CBOR_BREAK && last_val != 0xff)
-				? i + 1 : i;
+		*nitems_parsed = (err == CBOR_BREAK && last_val != 0xff) ?
+			i + 1 : i;
 	}
 
 	assert(ctx->reader->msgidx <= ctx->reader->msgsize);
