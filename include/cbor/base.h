@@ -44,7 +44,19 @@ typedef enum {
 	CBOR_ITEM_MAP,
 	CBOR_ITEM_FLOAT,
 	CBOR_ITEM_SIMPLE_VALUE,
+	CBOR_ITEM_TAG, /**< tag number in @p size; wraps the following item */
 } cbor_item_data_t;
+
+/**
+ * Type for a CBOR tag number (RFC 8949 §3.4).
+ *
+ * Currently backed by @c size_t. On 32-bit targets this limits the
+ * representable range to [0, 2^32-1]; tag numbers above that cause
+ * @ref cbor_parse to return @ref CBOR_INVALID.
+ *
+ * Encoding accepts the full @c uint64_t range via @ref cbor_encode_tag.
+ */
+typedef size_t cbor_tag_t;
 
 typedef struct {
 	cbor_item_data_t type;
@@ -115,6 +127,17 @@ uint8_t const *cbor_writer_get_encoded(cbor_writer_t const *writer);
 cbor_item_data_t cbor_get_item_type(cbor_item_t const *item);
 
 /**
+ * Get the tag number from a parsed CBOR tag item.
+ *
+ * Behaviour is undefined if @p item is not of type @ref CBOR_ITEM_TAG.
+ *
+ * @param[in] item parsed CBOR item of type @ref CBOR_ITEM_TAG
+ *
+ * @return tag number
+ */
+cbor_tag_t cbor_get_tag_number(cbor_item_t const *item);
+
+/**
  * Get the parsed CBOR size field of an item.
  *
  * Semantics depend on the item type and encoding form:
@@ -122,6 +145,7 @@ cbor_item_data_t cbor_get_item_type(cbor_item_t const *item);
  * - Byte/text string (definite-length): string length in bytes
  * - Array (definite-length): number of child items
  * - Map (definite-length): number of key-value pairs
+ * - Tag: tag number
  *
  * For indefinite-length string/array/map, this returns
  * `(size_t)CBOR_INDEFINITE_VALUE`, which means the size is unknown up front and

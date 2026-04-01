@@ -33,6 +33,8 @@ cbor_error_t cbor_encode_array_indefinite(cbor_writer_t *writer);
 cbor_error_t cbor_encode_map(cbor_writer_t *writer, size_t length);
 cbor_error_t cbor_encode_map_indefinite(cbor_writer_t *writer);
 
+cbor_error_t cbor_encode_tag(cbor_writer_t *writer, uint64_t tag_number);
+
 cbor_error_t cbor_encode_break(cbor_writer_t *writer);
 
 cbor_error_t cbor_encode_simple(cbor_writer_t *writer, uint8_t value);

@@ -257,11 +257,39 @@ static cbor_error_t do_recursive(struct parser_context *ctx)
 	return CBOR_SUCCESS;
 }
 
-/* TODO: Implement tag */
 static cbor_error_t do_tag(struct parser_context *ctx)
 {
-	(void)ctx;
-	return CBOR_INVALID;
+	if (ctx->following_bytes == (uint8_t)CBOR_INDEFINITE_VALUE) {
+		return CBOR_ILLEGAL;
+	}
+
+	size_t tag_offset = ctx->reader->msgidx;
+
+	/* Read tag number as uint64_t to detect overflow on 32-bit targets */
+	uint64_t tag_number = 0;
+	if (ctx->following_bytes == 0) {
+		tag_number = ctx->additional_info;
+	} else {
+		const uint8_t *msg = &ctx->reader->msg[ctx->reader->msgidx];
+		cbor_copy((uint8_t *)&tag_number, &msg[1], ctx->following_bytes);
+	}
+	ctx->reader->msgidx += (size_t)ctx->following_bytes + 1;
+
+	if (tag_number > (uint64_t)SIZE_MAX) {
+		return CBOR_INVALID;
+	}
+
+	set_item(ctx, CBOR_ITEM_TAG, tag_offset, (cbor_tag_t)tag_number);
+	ctx->reader->itemidx++;
+
+	size_t nparsed = 0;
+	cbor_error_t err = parse(ctx, 1, &nparsed);
+
+	if (nparsed == 0) {
+		return is_item_buffer_overrun(ctx)? CBOR_OVERRUN : CBOR_ILLEGAL;
+	}
+
+	return err;
 }
 
 static cbor_error_t do_float_and_other(struct parser_context *ctx)

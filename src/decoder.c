@@ -33,6 +33,7 @@ static const item_decoder_t decoders[] = {
 	decode_pass,		/* 4: CBOR_ITEM_MAP */
 	decode_float,		/* 5: CBOR_ITEM_FLOAT */
 	decode_simple,		/* 6: CBOR_ITEM_SIMPLE_VALUE */
+	decode_pass,		/* 7: CBOR_ITEM_TAG */
 };
 
 static uint8_t get_simple_value(uint8_t val)
@@ -154,6 +155,9 @@ cbor_error_t cbor_decode(cbor_reader_t const *reader, cbor_item_t const *item,
 {
 	if (cbor_item_is_break(item)) {
 		return CBOR_BREAK;
+	}
+	if (item->type == CBOR_ITEM_TAG) {
+		return CBOR_INVALID;
 	}
 	if (item->size > bufsize || bufsize == 0 || buf == NULL) {
 		return CBOR_OVERRUN;
