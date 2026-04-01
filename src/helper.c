@@ -46,16 +46,35 @@ static void parse_item(const cbor_reader_t *reader, const cbor_item_t *item,
 	size_t strkey_len = 0;
 	intptr_t intkey = -1;
 
+	/* TAG items themselves carry no value; the wrapped item is dispatched */
+	if (item->type == CBOR_ITEM_TAG) {
+		return;
+	}
+
 	if (parent && parent->type == CBOR_ITEM_MAP) {
-		if ((item - parent) % 2) { /* key */
+		/* Count non-TAG items from parent+1 to item to get logical
+		 * position, so TAG slots do not disturb key/value detection. */
+		size_t pos = 0;
+		for (const cbor_item_t *p = parent + 1; p <= item; p++) {
+			if (p->type != CBOR_ITEM_TAG) {
+				pos++;
+			}
+		}
+		if (pos % 2 == 1) { /* key position — odd (1-indexed) */
 			return;
 		}
 
-		if ((item - 1)->type == CBOR_ITEM_INTEGER) {
-			cbor_decode(reader, item - 1, &intkey, sizeof(intkey));
+		/* Walk backward past any TAG items to reach the actual key */
+		const cbor_item_t *key = item - 1;
+		while (key > parent && key->type == CBOR_ITEM_TAG) {
+			key--;
+		}
+
+		if (key->type == CBOR_ITEM_INTEGER) {
+			cbor_decode(reader, key, &intkey, sizeof(intkey));
 		} else {
-			strkey = cbor_decode_pointer(reader, item - 1);
-			strkey_len = (item - 1)->size;
+			strkey = cbor_decode_pointer(reader, key);
+			strkey_len = key->size;
 		}
 	}
 
@@ -74,11 +93,16 @@ typedef enum {
 	ITER_RECURSE,                /* container; recurse into children */
 	ITER_RECURSE_CALLBACK_FIRST, /* indefinite string; callback then recurse */
 	ITER_STOP,                   /* MAP size overflow; abort iteration */
+	ITER_TAG,                    /* tag prefix; callback then advance extra */
 } iter_action_t;
 
 static iter_action_t get_iter_action(const cbor_item_t *item,
 		size_t remaining_nodes, size_t *len)
 {
+	if (item->type == CBOR_ITEM_TAG) {
+		return ITER_TAG;
+	}
+
 	if (item->type == CBOR_ITEM_STRING &&
 			item->size == (size_t)CBOR_INDEFINITE_VALUE) {
 		*len = remaining_nodes;
@@ -137,6 +161,15 @@ static size_t iterate_each(const cbor_reader_t *reader,
 			continue;
 		case ITER_STOP:
 			return i + extra;
+		case ITER_TAG:
+			/* TAG is transparent: visible to caller but does not
+			 * consume a logical iteration slot. Advance the physical
+			 * extra counter and re-process the same logical index so
+			 * the wrapped item is seen under the original parent. */
+			(*callback_each)(reader, item, parent, arg);
+			extra++;
+			i--;	/* neutralised by the for-loop's i++ */
+			continue;
 		case ITER_LEAF:
 		default:
 			break;
@@ -222,6 +255,8 @@ const char *cbor_stringify_item(cbor_item_t *item)
 		return "float";
 	case CBOR_ITEM_SIMPLE_VALUE:
 		return "simple value";
+	case CBOR_ITEM_TAG:
+		return "tag";
 	case CBOR_ITEM_UNKNOWN: /* fall through */
 	default:
 		return "unknown";

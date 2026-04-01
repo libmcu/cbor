@@ -65,6 +65,11 @@ size_t cbor_get_item_size(cbor_item_t const *item)
 	return item->size;
 }
 
+cbor_tag_t cbor_get_tag_number(cbor_item_t const *item)
+{
+	return item->size;
+}
+
 void cbor_reader_init(cbor_reader_t *reader, cbor_item_t *items, size_t maxitems)
 {
 	assert(reader != NULL);
