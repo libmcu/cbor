@@ -99,6 +99,21 @@ TEST(ParserCount, ShouldReturnOverrun_WhenIndefiniteStringExceedsItemBuffer)
 	LONGS_EQUAL(2, parsed);
 }
 
+TEST(ParserCount,
+	     ShouldReturnIllegal_WhenIndefiniteStringMissingBreakAtEndOfFullItemBuffer)
+{
+	uint8_t msg[] = { 0x7f, 0x61, 0x61 };
+	cbor_reader_t limited_reader;
+	cbor_item_t limited_items[2];
+	size_t parsed = 0;
+
+	cbor_reader_init(&limited_reader, limited_items,
+			 sizeof(limited_items) / sizeof(*limited_items));
+	LONGS_EQUAL(CBOR_ILLEGAL,
+		    cbor_parse(&limited_reader, msg, sizeof(msg), &parsed));
+	LONGS_EQUAL(2, parsed);
+}
+
 TEST(ParserCount, ShouldReturnOverrun_WhenIndefiniteArrayExceedsItemBuffer)
 {
 	uint8_t msg[] = { 0x9f, 0x01, 0xff };
@@ -109,6 +124,36 @@ TEST(ParserCount, ShouldReturnOverrun_WhenIndefiniteArrayExceedsItemBuffer)
 	cbor_reader_init(&limited_reader, limited_items,
 			 sizeof(limited_items) / sizeof(*limited_items));
 	LONGS_EQUAL(CBOR_OVERRUN,
+		    cbor_parse(&limited_reader, msg, sizeof(msg), &parsed));
+	LONGS_EQUAL(2, parsed);
+}
+
+TEST(ParserCount,
+	     ShouldReturnIllegal_WhenIndefiniteArrayMissingBreakAtEndOfFullItemBuffer)
+{
+	uint8_t msg[] = { 0x9f, 0x01 };
+	cbor_reader_t limited_reader;
+	cbor_item_t limited_items[2];
+	size_t parsed = 0;
+
+	cbor_reader_init(&limited_reader, limited_items,
+			 sizeof(limited_items) / sizeof(*limited_items));
+	LONGS_EQUAL(CBOR_ILLEGAL,
+		    cbor_parse(&limited_reader, msg, sizeof(msg), &parsed));
+	LONGS_EQUAL(2, parsed);
+}
+
+TEST(ParserCount,
+	     ShouldReturnIllegal_WhenDefiniteArrayTruncatedAtEndOfFullItemBuffer)
+{
+	uint8_t msg[] = { 0x82, 0x01 };
+	cbor_reader_t limited_reader;
+	cbor_item_t limited_items[2];
+	size_t parsed = 0;
+
+	cbor_reader_init(&limited_reader, limited_items,
+			 sizeof(limited_items) / sizeof(*limited_items));
+	LONGS_EQUAL(CBOR_ILLEGAL,
 		    cbor_parse(&limited_reader, msg, sizeof(msg), &parsed));
 	LONGS_EQUAL(2, parsed);
 }

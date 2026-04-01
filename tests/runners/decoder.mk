@@ -18,7 +18,7 @@ INCLUDE_DIRS = \
 	$(CPPUTEST_HOME)/include \
 
 MOCKS_SRC_DIRS =
-CPPUTEST_CPPFLAGS = \
+CPPUTEST_CPPFLAGS += \
 	-DCBOR_PROJECT_ROOT=\"$(abspath ..)\"
 
 include MakefileRunner.mk

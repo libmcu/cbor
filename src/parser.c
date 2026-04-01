@@ -100,6 +100,12 @@ static bool is_illegal_break(uint8_t val, size_t maxitems)
 	return val == 0xff && maxitems != (size_t)CBOR_INDEFINITE_VALUE;
 }
 
+static bool is_item_buffer_overrun(const struct parser_context *ctx)
+{
+	return ctx->reader->itemidx >= ctx->reader->maxitems &&
+		ctx->reader->msgidx < ctx->reader->msgsize;
+}
+
 static cbor_error_t parse(struct parser_context *ctx, size_t maxitems,
 			  size_t *nitems_parsed)
 {
@@ -197,7 +203,7 @@ static cbor_error_t do_string(struct parser_context *ctx)
 		err = parse(ctx, (size_t)CBOR_INDEFINITE_VALUE, NULL);
 		if (err != CBOR_SUCCESS) {
 			return err;
-		} else if (ctx->reader->itemidx >= ctx->reader->maxitems) {
+		} else if (is_item_buffer_overrun(ctx)) {
 			return CBOR_OVERRUN;
 		}
 		return CBOR_ILLEGAL;
@@ -242,7 +248,7 @@ static cbor_error_t do_recursive(struct parser_context *ctx)
 	}
 
 	if (len == (size_t)CBOR_INDEFINITE_VALUE || nparsed < expected_items) {
-		if (ctx->reader->itemidx >= ctx->reader->maxitems) {
+		if (is_item_buffer_overrun(ctx)) {
 			return CBOR_OVERRUN;
 		}
 		return CBOR_ILLEGAL;
