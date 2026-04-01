@@ -509,3 +509,19 @@ TEST(Encoder, When_null_terminated_text_string_WithNullParameterGiven) {
 	LONGS_EQUAL(0x7F, writer.buf[0]);
 	LONGS_EQUAL(0x60, writer.buf[1]);
 }
+
+TEST(Encoder, ShouldReturnOverrun_WhenNullTerminatedTextDoesNotFit) {
+	cbor_writer_t small_writer;
+	uint8_t small_buffer[8];
+	uint8_t before[sizeof(small_buffer)];
+
+	memset(small_buffer, 0xA5, sizeof(small_buffer));
+	memcpy(before, small_buffer, sizeof(before));
+	cbor_writer_init(&small_writer, small_buffer, sizeof(small_buffer));
+
+	LONGS_EQUAL(CBOR_OVERRUN,
+			cbor_encode_null_terminated_text_string(&small_writer,
+					"12345678"));
+	LONGS_EQUAL(0, small_writer.bufidx);
+	MEMCMP_EQUAL(before, small_buffer, sizeof(before));
+}
