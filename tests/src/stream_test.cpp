@@ -45,6 +45,12 @@ struct Recorder {
 	int           abort_at;   /* abort when count reaches this value */
 };
 
+struct ZeroLengthGuard {
+	int    text_events;
+	size_t last_len;
+	bool   saw_zero_len;
+};
+
 static bool record_cb(const cbor_stream_event_t *event,
 		const cbor_stream_data_t *data, void *arg)
 {
@@ -109,6 +115,22 @@ static bool record_cb(const cbor_stream_event_t *event,
 	}
 
 	return true;
+}
+
+static bool reject_zero_length_text_cb(const cbor_stream_event_t *event,
+		const cbor_stream_data_t *data, void *arg)
+{
+	ZeroLengthGuard *guard = (ZeroLengthGuard *)arg;
+
+	if (event->type != CBOR_STREAM_EVENT_TEXT || data == NULL) {
+		return true;
+	}
+
+	guard->text_events++;
+	guard->last_len = data->str.len;
+	guard->saw_zero_len = (data->str.len == 0);
+
+	return !guard->saw_zero_len;
 }
 
 static void feed_all(cbor_stream_decoder_t *d, const uint8_t *buf, size_t len)
@@ -1016,4 +1038,38 @@ TEST(StreamMapKeyEnd, ShouldReportNestedMapEndAsMapKey_WhenNestedMapIsMapKey)
 	CHECK(!rec.events[5].is_map_key);
 
 	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_END,   rec.events[6].type);
+}
+
+TEST_GROUP(StreamLargePayload)
+{
+	cbor_stream_decoder_t decoder;
+	ZeroLengthGuard       guard;
+
+	void setup()
+	{
+		memset(&guard, 0, sizeof(guard));
+		cbor_stream_init(&decoder, reject_zero_length_text_cb, &guard);
+	}
+};
+
+TEST(StreamLargePayload, ShouldMakeForwardProgress_WhenTextLengthExceeds32BitRange)
+{
+	uint8_t header[] = {
+		0x7b,
+		0x00, 0x00, 0x00, 0x01,
+		0x00, 0x00, 0x00, 0x00,
+	};
+	uint8_t payload[] = { 'A' };
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_feed(&decoder, header, sizeof(header)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_feed(&decoder, payload, sizeof(payload)));
+
+	LONGS_EQUAL(1, guard.text_events);
+	CHECK(!guard.saw_zero_len);
+	LONGS_EQUAL(1, guard.last_len);
+	LONGS_EQUAL(2, decoder.state);
+	LONGLONGS_EQUAL(0x00000000ffffffffull,
+			(unsigned long long)decoder.payload_remaining);
+	CHECK(!decoder.payload_first_chunk);
+	LONGS_EQUAL(CBOR_NEED_MORE, cbor_stream_finish(&decoder));
 }

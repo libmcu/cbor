@@ -538,9 +538,9 @@ static cbor_error_t consume_payload(cbor_stream_decoder_t *d,
 		return CBOR_INVALID;
 	}
 
-	size_t avail = (size_t)d->payload_remaining;
-	if (avail > *remaining) {
-		avail = *remaining;
+	size_t avail = *remaining;
+	if (d->payload_remaining < (int64_t)avail) {
+		avail = (size_t)d->payload_remaining;
 	}
 
 	cbor_stream_event_type_t type = (d->major_type == 2)

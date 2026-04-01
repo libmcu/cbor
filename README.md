@@ -199,9 +199,11 @@ static bool on_event(const cbor_stream_event_t *event,
         printf("uint: %" PRIu64 " (depth=%u)\n", data->uint, event->depth);
         break;
     case CBOR_STREAM_EVENT_TEXT:
-        printf("text: %.*s (first=%d last=%d)\n",
-                data->str.ptr ? (int)data->str.len : 0,
-                data->str.ptr ? (const char *)data->str.ptr : "",
+        printf("text: ");
+        if (data->str.ptr) {
+            fwrite(data->str.ptr, 1, data->str.len, stdout);
+        }
+        printf(" (first=%d last=%d)\n",
                 data->str.first, data->str.last);
         break;
     case CBOR_STREAM_EVENT_MAP_START:
