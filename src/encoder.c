@@ -10,10 +10,6 @@
 
 #define MAJOR_TYPE_BIT			5
 
-#if !defined(MIN)
-#define MIN(a, b)			(((a) > (b))? (b) : (a))
-#endif
-
 static uint8_t get_additional_info(uint64_t value)
 {
 	uint8_t additional_info = 0;
@@ -31,6 +27,17 @@ static uint8_t get_additional_info(uint64_t value)
 	}
 
 	return additional_info;
+}
+
+static size_t count_strlen(char const *text, size_t maxlen)
+{
+	size_t len = 0;
+
+	while (len < maxlen && text[len] != '\0') {
+		len++;
+	}
+
+	return len;
 }
 
 static cbor_error_t encode_core(cbor_writer_t *writer, uint8_t major_type,
@@ -111,10 +118,15 @@ cbor_error_t cbor_encode_null_terminated_text_string(cbor_writer_t *writer,
 	size_t len = 0;
 
 	if (text != NULL) {
-		len = MIN(strlen(text), writer->bufsize - writer->bufidx);
+		size_t maxlen = writer->bufsize - writer->bufidx;
+
+		len = count_strlen(text, maxlen);
+		if (len == maxlen) {
+			return CBOR_OVERRUN;
+		}
 	}
 
-	return encode_core(writer, 3, (uint8_t const *)text, len, false);
+	return cbor_encode_text_string(writer, text, len);
 }
 
 cbor_error_t cbor_encode_array(cbor_writer_t *writer, size_t length)
