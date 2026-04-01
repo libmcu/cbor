@@ -229,6 +229,12 @@ TEST(Helper, iterate_ShouldVisitNoItems_WhenDefiniteMapIsEmpty)
 	LONGS_EQUAL(0, scalar_count);
 }
 
+TEST(Helper, stringifyError_ShouldDescribeStreamingErrors)
+{
+	STRCMP_EQUAL("need more data", cbor_stringify_error(CBOR_NEED_MORE));
+	STRCMP_EQUAL("aborted", cbor_stringify_error(CBOR_ABORTED));
+}
+
 TEST(Helper, iterate_ShouldVisitItemsInIndefiniteMap)
 {
 	/*

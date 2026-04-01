@@ -1,12 +1,18 @@
 /*
- * SPDX-FileCopyrightText: 2021 Kyunghwan Kwon <k@mononn.com>
+ * SPDX-FileCopyrightText: 2026 권경환 Kyunghwan Kwon <k@libmcu.org>
  *
  * SPDX-License-Identifier: MIT
  */
 
 #include "cbor/stream.h"
 #include "cbor/ieee754.h"
+
+#include <limits.h>
 #include <string.h>
+
+#if !defined(assert)
+#define assert(expr)
+#endif
 
 enum stream_state {
 	STREAM_STATE_IDLE    = 0,
@@ -15,7 +21,10 @@ enum stream_state {
 	STREAM_STATE_ERROR   = 3,
 };
 
-/* ---------- event helpers ---------- */
+static bool can_fit_int64(uint64_t value)
+{
+	return value <= (uint64_t)INT64_MAX;
+}
 
 static void build_event(cbor_stream_decoder_t *d,
 		cbor_stream_event_type_t type, cbor_stream_event_t *event)
@@ -40,8 +49,6 @@ static cbor_error_t invoke_cb(cbor_stream_decoder_t *d,
 	}
 	return CBOR_SUCCESS;
 }
-
-/* ---------- container helpers ---------- */
 
 static cbor_error_t emit_container_end(cbor_stream_decoder_t *d)
 {
@@ -69,10 +76,12 @@ static cbor_error_t after_item(cbor_stream_decoder_t *d)
 			break;
 		}
 
-		f->count--;
-		if (f->count > 0) {
+		if (f->count > 1) {
+			f->count--;
 			break;
 		}
+
+		f->count--; /* reaches 0: emit END */
 
 		cbor_error_t err = emit_container_end(d);
 		if (err != CBOR_SUCCESS) {
@@ -120,8 +129,6 @@ static cbor_error_t push_container(cbor_stream_decoder_t *d,
 	return CBOR_SUCCESS;
 }
 
-/* ---------- length decoding ---------- */
-
 static uint64_t decode_length_buf(const cbor_stream_decoder_t *d)
 {
 	uint64_t val = 0;
@@ -138,8 +145,6 @@ static uint64_t get_item_value(const cbor_stream_decoder_t *d)
 	}
 	return decode_length_buf(d);
 }
-
-/* ---------- float decoding ---------- */
 
 static double decode_float_value(const cbor_stream_decoder_t *d)
 {
@@ -158,8 +163,6 @@ static double decode_float_value(const cbor_stream_decoder_t *d)
 		return dbl;
 	}
 }
-
-/* ---------- item emitters ---------- */
 
 static cbor_error_t emit_uint(cbor_stream_decoder_t *d)
 {
@@ -182,8 +185,12 @@ static cbor_error_t emit_int(cbor_stream_decoder_t *d)
 	cbor_stream_data_t  data;
 	uint64_t raw = get_item_value(d);
 
+	if (!can_fit_int64(raw)) {
+		return CBOR_INVALID;
+	}
+
 	build_event(d, CBOR_STREAM_EVENT_INT, &event);
-	data.sint = (int64_t)(~raw);
+	data.sint = -(int64_t)raw - 1;
 
 	cbor_error_t err = invoke_cb(d, &event, &data);
 	if (err != CBOR_SUCCESS) {
@@ -258,8 +265,6 @@ static cbor_error_t emit_float(cbor_stream_decoder_t *d)
 	return after_item(d);
 }
 
-/* ---------- BREAK handling ---------- */
-
 static cbor_error_t handle_break(cbor_stream_decoder_t *d)
 {
 	if (d->in_indef_str) {
@@ -286,8 +291,6 @@ static cbor_error_t handle_break(cbor_stream_decoder_t *d)
 	return after_item(d);
 }
 
-/* ---------- process complete initial byte (no following bytes) ---------- */
-
 static cbor_error_t process_immediate(cbor_stream_decoder_t *d)
 {
 	cbor_error_t err;
@@ -295,10 +298,8 @@ static cbor_error_t process_immediate(cbor_stream_decoder_t *d)
 	switch (d->major_type) {
 	case 0: /* unsigned integer */
 		return emit_uint(d);
-
 	case 1: /* negative integer */
 		return emit_int(d);
-
 	case 2: /* byte string, length in additional_info */
 	case 3: /* text string, length in additional_info */ {
 		cbor_stream_event_type_t stype = (d->major_type == 2)
@@ -328,15 +329,12 @@ static cbor_error_t process_immediate(cbor_stream_decoder_t *d)
 		d->state = STREAM_STATE_PAYLOAD;
 		return CBOR_SUCCESS;
 	}
-
 	case 4: /* definite array */
 		return push_container(d, CBOR_ITEM_ARRAY,
 				(int64_t)d->additional_info);
-
 	case 5: /* definite map */
 		return push_container(d, CBOR_ITEM_MAP,
 				(int64_t)(d->additional_info * 2));
-
 	case 6: /* tag, value in additional_info */
 		if (d->has_pending_tag) {
 			return CBOR_EXCESSIVE;
@@ -344,18 +342,14 @@ static cbor_error_t process_immediate(cbor_stream_decoder_t *d)
 		d->has_pending_tag = true;
 		d->pending_tag     = (uint64_t)d->additional_info;
 		return CBOR_SUCCESS;
-
 	case 7: /* simple value (additional_info 0-23) */
 		/* additional_info >= 24 has following_bytes > 0, handled elsewhere;
 		 * additional_info == 31 (BREAK) is caught by handle_indefinite() */
 		return emit_simple(d, d->additional_info);
-
 	default:
 		return CBOR_ILLEGAL;
 	}
 }
-
-/* ---------- process complete length bytes ---------- */
 
 static cbor_error_t process_string_length(cbor_stream_decoder_t *d)
 {
@@ -365,6 +359,9 @@ static cbor_error_t process_string_length(cbor_stream_decoder_t *d)
 
 	/* For indefinite-string sub-chunks keep payload_total as -1 */
 	if (!d->in_indef_str) {
+		if (!can_fit_int64(len)) {
+			return CBOR_INVALID;
+		}
 		d->payload_total = (int64_t)len;
 	}
 
@@ -382,6 +379,10 @@ static cbor_error_t process_string_length(cbor_stream_decoder_t *d)
 		return CBOR_SUCCESS;
 	}
 
+	if (!can_fit_int64(len)) {
+		return CBOR_INVALID;
+	}
+
 	d->payload_remaining   = (int64_t)len;
 	d->payload_first_chunk = d->in_indef_str ? d->payload_first_chunk : true;
 	d->state = STREAM_STATE_PAYLOAD;
@@ -393,7 +394,20 @@ static cbor_error_t process_container_length(cbor_stream_decoder_t *d)
 	uint64_t n = decode_length_buf(d);
 	cbor_item_data_t type = (d->major_type == 4)
 		? CBOR_ITEM_ARRAY : CBOR_ITEM_MAP;
-	int64_t count = (type == CBOR_ITEM_MAP) ? (int64_t)(n * 2) : (int64_t)n;
+	int64_t count;
+
+	if (type == CBOR_ITEM_MAP) {
+		if (n > (uint64_t)(INT64_MAX / 2)) {
+			return CBOR_INVALID;
+		}
+		count = (int64_t)(n * 2u);
+	} else {
+		if (!can_fit_int64(n)) {
+			return CBOR_INVALID;
+		}
+		count = (int64_t)n;
+	}
+
 	return push_container(d, type, count);
 }
 
@@ -434,8 +448,6 @@ static cbor_error_t process_length_complete(cbor_stream_decoder_t *d)
 	}
 }
 
-/* ---------- indefinite-length starters ---------- */
-
 static cbor_error_t handle_indefinite(cbor_stream_decoder_t *d)
 {
 	switch (d->major_type) {
@@ -464,8 +476,6 @@ static cbor_error_t handle_indefinite(cbor_stream_decoder_t *d)
 		return CBOR_ILLEGAL;
 	}
 }
-
-/* ---------- initial byte parsing ---------- */
 
 static cbor_error_t process_initial_byte(cbor_stream_decoder_t *d, uint8_t b)
 {
@@ -505,11 +515,13 @@ static cbor_error_t process_initial_byte(cbor_stream_decoder_t *d, uint8_t b)
 	return CBOR_SUCCESS;
 }
 
-/* ---------- payload streaming ---------- */
-
 static cbor_error_t consume_payload(cbor_stream_decoder_t *d,
 		const uint8_t **p, size_t *remaining)
 {
+	if (d->payload_remaining <= 0) {
+		return CBOR_INVALID;
+	}
+
 	size_t avail = (size_t)d->payload_remaining;
 	if (avail > *remaining) {
 		avail = *remaining;
@@ -544,11 +556,16 @@ static cbor_error_t consume_payload(cbor_stream_decoder_t *d,
 	return CBOR_SUCCESS;
 }
 
-/* ---------- public API ---------- */
-
 void cbor_stream_init(cbor_stream_decoder_t *decoder,
 		cbor_stream_callback_t callback, void *arg)
 {
+	assert(decoder != NULL);
+	assert(callback != NULL);
+
+	if (decoder == NULL) {
+		return;
+	}
+
 	memset(decoder, 0, sizeof(*decoder));
 	decoder->callback     = callback;
 	decoder->callback_arg = arg;
@@ -558,6 +575,14 @@ void cbor_stream_init(cbor_stream_decoder_t *decoder,
 cbor_error_t cbor_stream_feed(cbor_stream_decoder_t *decoder,
 		const void *data, size_t len)
 {
+	if (decoder == NULL || decoder->callback == NULL) {
+		return CBOR_INVALID;
+	}
+
+	if (len > 0 && data == NULL) {
+		return CBOR_INVALID;
+	}
+
 	if (decoder->state == STREAM_STATE_ERROR) {
 		return decoder->error;
 	}
@@ -605,6 +630,10 @@ cbor_error_t cbor_stream_feed(cbor_stream_decoder_t *decoder,
 
 cbor_error_t cbor_stream_finish(cbor_stream_decoder_t *decoder)
 {
+	if (decoder == NULL || decoder->callback == NULL) {
+		return CBOR_INVALID;
+	}
+
 	if (decoder->state == STREAM_STATE_ERROR) {
 		return decoder->error;
 	}
@@ -620,6 +649,12 @@ cbor_error_t cbor_stream_finish(cbor_stream_decoder_t *decoder)
 
 void cbor_stream_reset(cbor_stream_decoder_t *decoder)
 {
+	assert(decoder != NULL);
+
+	if (decoder == NULL) {
+		return;
+	}
+
 	cbor_stream_callback_t cb  = decoder->callback;
 	void                  *arg = decoder->callback_arg;
 	memset(decoder, 0, sizeof(*decoder));

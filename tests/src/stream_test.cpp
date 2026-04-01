@@ -100,6 +100,10 @@ static bool record_cb(const cbor_stream_event_t *event,
 	case CBOR_STREAM_EVENT_MAP_START:
 		ev.container_size = data->container.size;
 		break;
+	case CBOR_STREAM_EVENT_ARRAY_END:
+	case CBOR_STREAM_EVENT_MAP_END:
+	case CBOR_STREAM_EVENT_NULL:
+	case CBOR_STREAM_EVENT_UNDEFINED:
 	default:
 		break;
 	}
@@ -430,11 +434,7 @@ TEST(StreamSimple, ShouldEmitFloat_WhenHalfPrecisionFloatGiven)
 
 TEST(StreamSimple, ShouldEmitFloat_WhenSinglePrecisionFloatGiven)
 {
-	/* 3.14f in single precision */
-	float f = 3.14f;
-	uint8_t raw[4];
-	memcpy(raw, &f, 4);
-	uint8_t msg[5] = { 0xfa, raw[3], raw[2], raw[1], raw[0] };
+	uint8_t msg[] = { 0xfa, 0x40, 0x48, 0xf5, 0xc3 };
 	feed_all(&decoder, msg, sizeof(msg));
 
 	LONGS_EQUAL(1, rec.count);
@@ -708,6 +708,45 @@ TEST(StreamError, ShouldReturnAborted_WhenCallbackReturnsFalse)
 
 	uint8_t msg[] = { 0x01, 0x02 };
 	LONGS_EQUAL(CBOR_ABORTED, cbor_stream_feed(&decoder, msg, sizeof(msg)));
+}
+
+TEST(StreamError, ShouldReturnInvalid_WhenCallbackIsNull)
+{
+	cbor_stream_init(&decoder, NULL, NULL);
+
+	uint8_t msg[] = { 0x01 };
+	LONGS_EQUAL(CBOR_INVALID, cbor_stream_feed(&decoder, msg, sizeof(msg)));
+	LONGS_EQUAL(CBOR_INVALID, cbor_stream_finish(&decoder));
+}
+
+TEST(StreamError, ShouldReturnInvalid_WhenNegativeIntegerExceedsInt64Range)
+{
+	uint8_t msg[] = {
+		0x3b, 0x80, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+	};
+
+	LONGS_EQUAL(CBOR_INVALID, cbor_stream_feed(&decoder, msg, sizeof(msg)));
+}
+
+TEST(StreamError, ShouldReturnInvalid_WhenStringLengthExceedsInt64Range)
+{
+	uint8_t msg[] = {
+		0x7b, 0x80, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+	};
+
+	LONGS_EQUAL(CBOR_INVALID, cbor_stream_feed(&decoder, msg, sizeof(msg)));
+}
+
+TEST(StreamError, ShouldReturnInvalid_WhenMapLengthOverflowsItemCount)
+{
+	uint8_t msg[] = {
+		0xbb, 0x40, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+	};
+
+	LONGS_EQUAL(CBOR_INVALID, cbor_stream_feed(&decoder, msg, sizeof(msg)));
 }
 
 TEST(StreamError, ShouldReturnNeedMore_WhenFinishCalledMidItem)

@@ -11,5 +11,6 @@ CBOR_SRCS := \
 	$(cbor-basedir)src/encoder.c \
 	$(cbor-basedir)src/helper.c \
 	$(cbor-basedir)src/ieee754.c \
+	$(cbor-basedir)src/stream.c \
 
 CBOR_INCS := $(cbor-basedir)include

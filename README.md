@@ -187,6 +187,7 @@ the full message to be in memory first. It is push-based: feed any number of
 bytes at a time and receive events via a callback as items are decoded.
 
 ```c
+#include <inttypes.h>
 #include "cbor/stream.h"
 
 static bool on_event(const cbor_stream_event_t *event,
@@ -194,7 +195,7 @@ static bool on_event(const cbor_stream_event_t *event,
 {
     switch (event->type) {
     case CBOR_STREAM_EVENT_UINT:
-        printf("uint: %llu (depth=%u)\n", data->uint, event->depth);
+        printf("uint: %" PRIu64 " (depth=%u)\n", data->uint, event->depth);
         break;
     case CBOR_STREAM_EVENT_TEXT:
         printf("text: %.*s (first=%d last=%d)\n",
@@ -202,7 +203,7 @@ static bool on_event(const cbor_stream_event_t *event,
                 data->str.first, data->str.last);
         break;
     case CBOR_STREAM_EVENT_MAP_START:
-        printf("map start (size=%lld)\n", data->container.size);
+        printf("map start (size=%" PRId64 ")\n", data->container.size);
         break;
     case CBOR_STREAM_EVENT_MAP_END:
         printf("map end\n");
