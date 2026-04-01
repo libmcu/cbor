@@ -185,6 +185,27 @@ TEST(TagParser, ShouldReturnTagNumber_WhenGetTagNumberCalled)
 	LONGS_EQUAL(1, cbor_get_tag_number(&items[0]));
 }
 
+TEST(TagParser, ShouldReturnTagNumber_WhenGetItemSizeCalledForTag)
+{
+	uint8_t msg[] = { 0xC1, 0x00 };
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
+	LONGS_EQUAL(CBOR_ITEM_TAG, items[0].type);
+	LONGS_EQUAL(1, cbor_get_item_size(&items[0]));
+}
+
+TEST(TagParser, ShouldReturnInvalid_WhenDecodingTagItem)
+{
+	uint8_t msg[] = { 0xC1, 0x00 };
+	uint32_t out = 0x12345678;
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
+	LONGS_EQUAL(CBOR_ITEM_TAG, items[0].type);
+	LONGS_EQUAL(CBOR_INVALID,
+		    cbor_decode(&reader, &items[0], &out, sizeof(out)));
+	LONGS_EQUAL(0x12345678, out);
+}
+
 TEST(TagParser, ShouldDecodeWrappedValue_WhenTaggedIntegerGiven)
 {
 	/* tag(1, 1234567890)  →  0xC1 0x1A 0x49 0x96 0x02 0xD2 */

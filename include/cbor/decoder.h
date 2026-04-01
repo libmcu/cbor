@@ -21,6 +21,9 @@ extern "C" {
  * @param[out] buf the buffer where decoded value to be written in
  * @param[in] bufsize the buffer size
  *
+ * @note @ref CBOR_ITEM_TAG is metadata-only. Use @ref cbor_get_tag_number to
+ *       read tag number and decode the wrapped item separately.
+ *
  * @return a code of @ref cbor_error_t
  */
 cbor_error_t cbor_decode(cbor_reader_t const *reader, cbor_item_t const *item,

@@ -145,6 +145,7 @@ cbor_tag_t cbor_get_tag_number(cbor_item_t const *item);
  * - Byte/text string (definite-length): string length in bytes
  * - Array (definite-length): number of child items
  * - Map (definite-length): number of key-value pairs
+ * - Tag: tag number
  *
  * For indefinite-length string/array/map, this returns
  * `(size_t)CBOR_INDEFINITE_VALUE`, which means the size is unknown up front and

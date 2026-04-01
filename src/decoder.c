@@ -156,9 +156,8 @@ cbor_error_t cbor_decode(cbor_reader_t const *reader, cbor_item_t const *item,
 	if (cbor_item_is_break(item)) {
 		return CBOR_BREAK;
 	}
-	/* TAG items carry no decodable payload; tag number is in item->size */
 	if (item->type == CBOR_ITEM_TAG) {
-		return CBOR_SUCCESS;
+		return CBOR_INVALID;
 	}
 	if (item->size > bufsize || bufsize == 0 || buf == NULL) {
 		return CBOR_OVERRUN;
