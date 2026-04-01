@@ -103,7 +103,8 @@ typedef struct {
  * Initialize a streaming CBOR decoder.
  *
  * @param[in,out] decoder  decoder context allocated by caller
- * @param[in]     callback event callback; must not be NULL
+ * @param[in]     callback event callback; if NULL, subsequent feed/finish
+ *                           calls return CBOR_INVALID
  * @param[in]     arg      opaque pointer forwarded to every callback
  */
 void cbor_stream_init(cbor_stream_decoder_t *decoder,

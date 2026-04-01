@@ -1059,17 +1059,20 @@ TEST(StreamLargePayload, ShouldMakeForwardProgress_WhenTextLengthExceeds32BitRan
 		0x00, 0x00, 0x00, 0x01,
 		0x00, 0x00, 0x00, 0x00,
 	};
-	uint8_t payload[] = { 'A' };
+	uint8_t payload1[] = { 'A' };
+	uint8_t payload2[] = { 'B' };
 
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_feed(&decoder, header, sizeof(header)));
-	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_feed(&decoder, payload, sizeof(payload)));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_feed(&decoder, payload1, sizeof(payload1)));
 
 	LONGS_EQUAL(1, guard.text_events);
 	CHECK(!guard.saw_zero_len);
 	LONGS_EQUAL(1, guard.last_len);
-	LONGS_EQUAL(2, decoder.state);
-	LONGLONGS_EQUAL(0x00000000ffffffffull,
-			(unsigned long long)decoder.payload_remaining);
-	CHECK(!decoder.payload_first_chunk);
+	LONGS_EQUAL(CBOR_NEED_MORE, cbor_stream_finish(&decoder));
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_feed(&decoder, payload2, sizeof(payload2)));
+	LONGS_EQUAL(2, guard.text_events);
+	CHECK(!guard.saw_zero_len);
+	LONGS_EQUAL(1, guard.last_len);
 	LONGS_EQUAL(CBOR_NEED_MORE, cbor_stream_finish(&decoder));
 }

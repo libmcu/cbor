@@ -273,7 +273,7 @@ or `-1` for indefinite-length.
 **API summary:**
 
 ```c
-/* Initialize (callback must not be NULL) */
+/* Initialize (NULL callback is allowed, but feed/finish will return CBOR_INVALID) */
 void cbor_stream_init(cbor_stream_decoder_t *decoder,
         cbor_stream_callback_t callback, void *arg);
 
