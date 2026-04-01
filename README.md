@@ -187,6 +187,7 @@ the full message to be in memory first. It is push-based: feed any number of
 bytes at a time and receive events via a callback as items are decoded.
 
 ```c
+#include <stdio.h>
 #include <inttypes.h>
 #include "cbor/stream.h"
 
@@ -228,7 +229,7 @@ if (cbor_stream_finish(&decoder) != CBOR_SUCCESS) {
 }
 ```
 
-**Event callback** receives two arguments on every call:
+**Event callback** receives three arguments on every call:
 
 | Field | Description |
 | --- | --- |
@@ -238,6 +239,7 @@ if (cbor_stream_finish(&decoder) != CBOR_SUCCESS) {
 | `event->has_tag` | `true` when the item carries a CBOR tag |
 | `event->tag` | Tag number (valid only when `has_tag` is `true`) |
 | `data` | Decoded value; `NULL` for `_END` events |
+| `arg` | User-supplied context pointer passed to `cbor_stream_init()` |
 
 Returning `false` from the callback stops decoding and causes
 `cbor_stream_feed()` to return `CBOR_ABORTED`.
