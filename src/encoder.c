@@ -29,6 +29,17 @@ static uint8_t get_additional_info(uint64_t value)
 	return additional_info;
 }
 
+static size_t count_strlen(char const *text, size_t maxlen)
+{
+	size_t len = 0;
+
+	while (len < maxlen && text[len] != '\0') {
+		len++;
+	}
+
+	return len;
+}
+
 static cbor_error_t encode_core(cbor_writer_t *writer, uint8_t major_type,
 		uint8_t const *data, uint64_t datasize, bool indefinite)
 {
@@ -104,7 +115,16 @@ cbor_error_t cbor_encode_text_string(cbor_writer_t *writer,
 cbor_error_t cbor_encode_null_terminated_text_string(cbor_writer_t *writer,
 		char const *text)
 {
-	size_t len = (text != NULL) ? strlen(text) : 0;
+	size_t len = 0;
+
+	if (text != NULL) {
+		size_t maxlen = writer->bufsize - writer->bufidx;
+
+		len = count_strlen(text, maxlen);
+		if (len == maxlen) {
+			return CBOR_OVERRUN;
+		}
+	}
 
 	return cbor_encode_text_string(writer, text, len);
 }
