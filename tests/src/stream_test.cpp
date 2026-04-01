@@ -919,3 +919,101 @@ TEST(StreamChunked, ShouldDecodeNestedMap_WhenComplexMessageGiven)
 	LONGS_EQUAL(1, rec.events[2].depth); /* array-start inside map value at depth 1 */
 	LONGS_EQUAL(2, rec.events[3].depth); /* items inside array at depth 2 */
 }
+
+/* ---------- TEST_GROUP: is_map_key on END events ---------- */
+
+TEST_GROUP(StreamMapKeyEnd)
+{
+	cbor_stream_decoder_t decoder;
+	Recorder              rec;
+
+	void setup()
+	{
+		memset(&rec, 0, sizeof(rec));
+		cbor_stream_init(&decoder, record_cb, &rec);
+	}
+};
+
+TEST(StreamMapKeyEnd, ShouldReportArrayEndAsMapKey_WhenArrayIsMapKey)
+{
+	/*
+	 * {[1]: "v"}
+	 * 0xa1         map(1 pair)
+	 * 0x81 0x01    array(1): uint 1        <- map key
+	 * 0x61 0x76    text "v"                <- map value
+	 *
+	 * Expected events and is_map_key flags:
+	 *  [0] MAP_START      is_map_key=false (top-level)
+	 *  [1] ARRAY_START    is_map_key=true  (array is the key)
+	 *  [2] UINT(1)        is_map_key=false (inside array, not in a map)
+	 *  [3] ARRAY_END      is_map_key=true  (array was the key, its end should reflect that)
+	 *  [4] TEXT "v"       is_map_key=false (this is the value)
+	 *  [5] MAP_END        is_map_key=false
+	 */
+	uint8_t msg[] = { 0xa1, 0x81, 0x01, 0x61, 0x76 };
+	feed_all(&decoder, msg, sizeof(msg));
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_finish(&decoder));
+	LONGS_EQUAL(6, rec.count);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_START,   rec.events[0].type);
+	CHECK(!rec.events[0].is_map_key);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_ARRAY_START, rec.events[1].type);
+	CHECK(rec.events[1].is_map_key);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_UINT,        rec.events[2].type);
+	CHECK(!rec.events[2].is_map_key);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_ARRAY_END,   rec.events[3].type);
+	CHECK(rec.events[3].is_map_key);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_TEXT,        rec.events[4].type);
+	CHECK(!rec.events[4].is_map_key);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_END,     rec.events[5].type);
+}
+
+TEST(StreamMapKeyEnd, ShouldReportNestedMapEndAsMapKey_WhenNestedMapIsMapKey)
+{
+	/*
+	 * {{1:2}: "v"}
+	 * 0xa1               outer map(1 pair)
+	 * 0xa1 0x01 0x02     inner map{1:2}   <- outer map key
+	 * 0x61 0x76          text "v"         <- outer map value
+	 *
+	 * Expected events:
+	 *  [0] MAP_START (outer)   is_map_key=false
+	 *  [1] MAP_START (inner)   is_map_key=true  (inner map is the key)
+	 *  [2] UINT(1)             is_map_key=true  (key of inner map)
+	 *  [3] UINT(2)             is_map_key=false (value of inner map)
+	 *  [4] MAP_END (inner)     is_map_key=true  (inner map was the key)
+	 *  [5] TEXT "v"            is_map_key=false (outer map value)
+	 *  [6] MAP_END (outer)     is_map_key=false
+	 */
+	uint8_t msg[] = { 0xa1, 0xa1, 0x01, 0x02, 0x61, 0x76 };
+	feed_all(&decoder, msg, sizeof(msg));
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_finish(&decoder));
+	LONGS_EQUAL(7, rec.count);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_START, rec.events[0].type);
+	CHECK(!rec.events[0].is_map_key);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_START, rec.events[1].type);
+	CHECK(rec.events[1].is_map_key);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_UINT,      rec.events[2].type);
+	CHECK(rec.events[2].is_map_key);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_UINT,      rec.events[3].type);
+	CHECK(!rec.events[3].is_map_key);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_END,   rec.events[4].type);
+	CHECK(rec.events[4].is_map_key);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_TEXT,      rec.events[5].type);
+	CHECK(!rec.events[5].is_map_key);
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_END,   rec.events[6].type);
+}

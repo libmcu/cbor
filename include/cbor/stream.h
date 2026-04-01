@@ -129,19 +129,19 @@ cbor_error_t cbor_stream_feed(cbor_stream_decoder_t *decoder,
 
 /**
  * Signal end of input and verify the decoder is in a clean idle state.
-	 *
-	 * After any non-CBOR_SUCCESS return from cbor_stream_feed() the decoder
-	 * enters a sticky error state; in that case this function returns the same
-	 * error code without further processing.
+ *
+ * After any non-CBOR_SUCCESS return from cbor_stream_feed() the decoder
+ * enters a sticky error state; in that case this function returns the same
+ * error code without further processing.
  *
  * @param[in,out] decoder decoder context
  *
-	 * @return CBOR_SUCCESS if all items were complete and the decoder is idle;
-	 *         CBOR_NEED_MORE if the end of input was reached but additional
-	 *         bytes are required to complete the last item; CBOR_INVALID if
-	 *         @p decoder is NULL or the decoder has no valid callback; or the
-	 *         last non-success error previously returned by cbor_stream_feed()
-	 *         if the decoder is in a sticky error state
+ * @return CBOR_SUCCESS if all items were complete and the decoder is idle;
+ *         CBOR_NEED_MORE if the end of input was reached but additional
+ *         bytes are required to complete the last item; CBOR_INVALID if
+ *         @p decoder is NULL or the decoder has no valid callback; or the
+ *         last non-success error previously returned by cbor_stream_feed()
+ *         if the decoder is in a sticky error state
  */
 cbor_error_t cbor_stream_finish(cbor_stream_decoder_t *decoder);
 
