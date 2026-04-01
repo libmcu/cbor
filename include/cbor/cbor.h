@@ -15,6 +15,7 @@ extern "C" {
 #include "cbor/decoder.h"
 #include "cbor/encoder.h"
 #include "cbor/helper.h"
+#include "cbor/stream.h"
 
 #if defined(__cplusplus)
 }

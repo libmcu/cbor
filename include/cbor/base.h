@@ -34,6 +34,8 @@ typedef enum {
 	CBOR_OVERRUN, /**< more items than given buffer space */
 	CBOR_BREAK,
 	CBOR_EXCESSIVE, /**< recursion more than @ref CBOR_RECURSION_MAX_LEVEL */
+	CBOR_NEED_MORE, /**< stream ended before item complete */
+	CBOR_ABORTED, /**< callback returned false */
 } cbor_error_t;
 
 typedef enum {

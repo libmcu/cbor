@@ -180,6 +180,108 @@ if (err == CBOR_OVERRUN) {
 In this case, `n` contains only the number of items actually stored before the
 overrun.
 
+### Streaming Decoder
+
+The streaming decoder processes CBOR bytes incrementally without requiring
+the full message to be in memory first. It is push-based: feed any number of
+bytes at a time and receive events via a callback as items are decoded.
+
+```c
+#include "cbor/stream.h"
+
+static bool on_event(const cbor_stream_event_t *event,
+        const cbor_stream_data_t *data, void *arg)
+{
+    switch (event->type) {
+    case CBOR_STREAM_EVENT_UINT:
+        printf("uint: %llu (depth=%u)\n", data->uint, event->depth);
+        break;
+    case CBOR_STREAM_EVENT_TEXT:
+        printf("text: %.*s (first=%d last=%d)\n",
+                (int)data->str.len, data->str.ptr,
+                data->str.first, data->str.last);
+        break;
+    case CBOR_STREAM_EVENT_MAP_START:
+        printf("map start (size=%lld)\n", data->container.size);
+        break;
+    case CBOR_STREAM_EVENT_MAP_END:
+        printf("map end\n");
+        break;
+    default:
+        break;
+    }
+    return true; /* return false to abort decoding */
+}
+
+cbor_stream_decoder_t decoder;
+cbor_stream_init(&decoder, on_event, NULL);
+
+/* Feed in any chunk size */
+cbor_stream_feed(&decoder, chunk1, chunk1_len);
+cbor_stream_feed(&decoder, chunk2, chunk2_len);
+
+/* Verify all items were complete */
+if (cbor_stream_finish(&decoder) != CBOR_SUCCESS) {
+    /* truncated input */
+}
+```
+
+**Event callback** receives two arguments on every call:
+
+| Field | Description |
+| --- | --- |
+| `event->type` | Item type (`CBOR_STREAM_EVENT_UINT`, `_TEXT`, `_ARRAY_START`, …) |
+| `event->depth` | Nesting depth (0 = top level) |
+| `event->is_map_key` | `true` when the item is a map key |
+| `event->has_tag` | `true` when the item carries a CBOR tag |
+| `event->tag` | Tag number (valid only when `has_tag` is `true`) |
+| `data` | Decoded value; `NULL` for `_END` events |
+
+Returning `false` from the callback stops decoding and causes
+`cbor_stream_feed()` to return `CBOR_ABORTED`.
+
+**String events** (`CBOR_STREAM_EVENT_BYTES` / `CBOR_STREAM_EVENT_TEXT`)
+carry chunk metadata in `data->str`:
+
+| Field | Description |
+| --- | --- |
+| `ptr` | Pointer into the caller's feed buffer (valid during the callback) |
+| `len` | Bytes in this chunk |
+| `total` | Total string length; `-1` for indefinite-length strings |
+| `first` | `true` on the first chunk |
+| `last` | `true` on the last chunk |
+
+A definite-length string may arrive in multiple chunks when the payload
+spans several `cbor_stream_feed()` calls. An indefinite-length string emits
+one chunk per CBOR sub-chunk, followed by a zero-length chunk with
+`last = true` for the BREAK terminator.
+
+**Container events** (`_ARRAY_START` / `_MAP_START`) carry
+`data->container.size`: the number of items (array) or key-value pairs (map),
+or `-1` for indefinite-length.
+
+**API summary:**
+
+```c
+/* Initialize (callback must not be NULL) */
+void cbor_stream_init(cbor_stream_decoder_t *decoder,
+        cbor_stream_callback_t callback, void *arg);
+
+/* Push bytes; may be called repeatedly with any chunk size */
+cbor_error_t cbor_stream_feed(cbor_stream_decoder_t *decoder,
+        const void *data, size_t len);
+
+/* Signal end-of-input; returns CBOR_NEED_MORE if input was truncated */
+cbor_error_t cbor_stream_finish(cbor_stream_decoder_t *decoder);
+
+/* Reset to initial state (preserves callback and arg) */
+void cbor_stream_reset(cbor_stream_decoder_t *decoder);
+```
+
+After any error `cbor_stream_feed()` enters a sticky error state and returns
+the same error on subsequent calls. Use `cbor_stream_reset()` to reuse the
+decoder.
+
 ## Tools
 
 ### Item counter script
