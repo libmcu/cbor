@@ -700,6 +700,14 @@ TEST(StreamError, ShouldReturnIllegal_WhenBreakInsideDefiniteArray)
 	LONGS_EQUAL(CBOR_ILLEGAL, cbor_stream_feed(&decoder, msg, sizeof(msg)));
 }
 
+TEST(StreamError, ShouldReturnIllegal_WhenBreakFollowsPendingTagInIndefiniteArray)
+{
+	uint8_t msg[] = { 0x9f, 0xc0, 0xff };
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_stream_feed(&decoder, msg, sizeof(msg)));
+	LONGS_EQUAL(1, rec.count);
+	LONGS_EQUAL(CBOR_STREAM_EVENT_ARRAY_START, rec.events[0].type);
+}
+
 TEST(StreamError, ShouldReturnIllegal_WhenReservedAdditionalInfoGiven)
 {
 	uint8_t msg[] = { 0x1c }; /* additional_info=28, reserved */

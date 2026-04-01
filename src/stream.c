@@ -100,7 +100,7 @@ static cbor_error_t push_container(cbor_stream_decoder_t *d,
 	}
 
 	cbor_stream_event_t event;
-	cbor_stream_data_t  data;
+	cbor_stream_data_t  data = {0};
 	cbor_stream_event_type_t evtype = (type == CBOR_ITEM_ARRAY)
 		? CBOR_STREAM_EVENT_ARRAY_START : CBOR_STREAM_EVENT_MAP_START;
 
@@ -168,7 +168,7 @@ static double decode_float_value(const cbor_stream_decoder_t *d)
 static cbor_error_t emit_uint(cbor_stream_decoder_t *d)
 {
 	cbor_stream_event_t event;
-	cbor_stream_data_t  data;
+	cbor_stream_data_t  data = {0};
 
 	build_event(d, CBOR_STREAM_EVENT_UINT, &event);
 	data.uint = get_item_value(d);
@@ -183,7 +183,7 @@ static cbor_error_t emit_uint(cbor_stream_decoder_t *d)
 static cbor_error_t emit_int(cbor_stream_decoder_t *d)
 {
 	cbor_stream_event_t event;
-	cbor_stream_data_t  data;
+	cbor_stream_data_t  data = {0};
 	uint64_t raw = get_item_value(d);
 
 	if (!can_fit_int64(raw)) {
@@ -205,7 +205,7 @@ static cbor_error_t emit_str_chunk(cbor_stream_decoder_t *d,
 		const uint8_t *ptr, size_t len, bool first, bool last)
 {
 	cbor_stream_event_t event;
-	cbor_stream_data_t  data;
+	cbor_stream_data_t  data = {0};
 
 	build_event(d, type, &event);
 	data.str.ptr   = ptr;
@@ -254,7 +254,7 @@ static cbor_error_t emit_simple(cbor_stream_decoder_t *d, uint8_t val)
 static cbor_error_t emit_float(cbor_stream_decoder_t *d)
 {
 	cbor_stream_event_t event;
-	cbor_stream_data_t  data;
+	cbor_stream_data_t  data = {0};
 
 	build_event(d, CBOR_STREAM_EVENT_FLOAT, &event);
 	data.flt = decode_float_value(d);
@@ -281,6 +281,10 @@ static cbor_error_t handle_break(cbor_stream_decoder_t *d)
 	}
 
 	if (d->depth == 0 || d->stack[d->depth - 1].count >= 0) {
+		return CBOR_ILLEGAL;
+	}
+
+	if (d->has_pending_tag) {
 		return CBOR_ILLEGAL;
 	}
 
