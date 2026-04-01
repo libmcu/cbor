@@ -243,9 +243,10 @@ if (cbor_stream_finish(&decoder) != CBOR_SUCCESS) {
 | `data` | Decoded value; `NULL` for `_END` events |
 | `arg` | User-supplied context pointer passed to `cbor_stream_init()` |
 
-Note: The streaming decoder supports only one pending tag. A second tag
-before the tagged item resolves causes `cbor_stream_feed()` to return
-`CBOR_EXCESSIVE`.
+> [!NOTE]
+> The streaming decoder supports only one pending tag. A second tag
+> before the tagged item resolves causes `cbor_stream_feed()` to return
+> `CBOR_EXCESSIVE`.
 
 Returning `false` from the callback stops decoding and causes
 `cbor_stream_feed()` to return `CBOR_ABORTED`.
