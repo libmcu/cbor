@@ -156,3 +156,16 @@ TEST(ToolItemCount, ShouldPrintIllegalForMissingBreakInIndefiniteMap)
 
 	STRCMP_CONTAINS("error: CBOR_ILLEGAL", out.c_str());
 }
+
+TEST(ToolItemCount, ShouldPrintIllegalForStandaloneBreak)
+{
+	if (!require_item_count_tool()) {
+		return;
+	}
+
+	std::string out = run_command(
+		("python3 \"" + get_script_path() + "\" --hex \"FF\"")
+			.c_str());
+
+	STRCMP_CONTAINS("error: CBOR_ILLEGAL", out.c_str());
+}
