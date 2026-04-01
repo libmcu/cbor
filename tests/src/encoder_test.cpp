@@ -103,13 +103,35 @@ TEST(Encoder, WhenNegativeIntegerGiven) {
 }
 
 TEST(Encoder, ShouldReturnInvalid_WhenZeroGivenForNegativeInteger) {
+	uint8_t before[sizeof(writer_buffer)];
+
+	memset(writer_buffer, 0xA5, sizeof(writer_buffer));
+	memcpy(before, writer_buffer, sizeof(before));
+
 	LONGS_EQUAL(CBOR_INVALID, cbor_encode_negative_integer(&writer, 0));
 	LONGS_EQUAL(0, writer.bufidx);
+	MEMCMP_EQUAL(before, writer_buffer, sizeof(before));
 }
 
 TEST(Encoder, ShouldReturnInvalid_WhenPositiveGivenForNegativeInteger) {
+	uint8_t before[sizeof(writer_buffer)];
+
+	memset(writer_buffer, 0xA5, sizeof(writer_buffer));
+	memcpy(before, writer_buffer, sizeof(before));
+
 	LONGS_EQUAL(CBOR_INVALID, cbor_encode_negative_integer(&writer, 1));
 	LONGS_EQUAL(0, writer.bufidx);
+	MEMCMP_EQUAL(before, writer_buffer, sizeof(before));
+}
+
+TEST(Encoder, ShouldEncodeInt64Min_WhenNegativeIntegerGiven) {
+	const uint8_t expected[] = {
+		0x3B, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+	};
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_encode_negative_integer(&writer, INT64_MIN));
+	LONGS_EQUAL(sizeof(expected), writer.bufidx);
+	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
 }
 
 TEST(Encoder, WhenEncodedLengthByteStringGiven) {

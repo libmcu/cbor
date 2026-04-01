@@ -83,7 +83,7 @@ cbor_error_t cbor_encode_negative_integer(cbor_writer_t *writer, int64_t value)
 		return CBOR_INVALID;
 	}
 
-	return encode_core(writer, 1, NULL, ((uint64_t)-value) - 1, false);
+	return encode_core(writer, 1, NULL, (uint64_t)(-1 - value), false);
 }
 
 cbor_error_t cbor_encode_byte_string(cbor_writer_t *writer,
