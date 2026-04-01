@@ -107,12 +107,104 @@ size_t n;
 cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
 cbor_parse(&reader, cbor_message, cbor_message_len, &n);
 
-for (i = 0; i < n; i++) {
+for (size_t i = 0; i < n; i++) {
 	printf("item: %s, size: %zu\n",
 			cbor_stringify_item(&items[i]),
-			cbor_get_item_size(&items[i]);
+			cbor_get_item_size(&items[i]));
 }
 ```
+
+`MAX_ITEMS` is a capacity in **number of parsed items**, not bytes. The memory
+footprint of this array is:
+
+```c
+size_t item_buffer_bytes = MAX_ITEMS * sizeof(cbor_item_t);
+```
+
+`sizeof(cbor_item_t)` is platform dependent (e.g. typically 12 bytes on many
+32-bit MCUs, and often 24 bytes on 64-bit hosts).
+
+Each `cbor_item_t` represents one parsed CBOR node (container and leaf both
+count as one item). `cbor_get_item_size()` unit depends on the item type:
+
+* Integer / float / simple value: encoded payload size in bytes
+* Byte/text string (definite-length): string length in bytes
+* Array (definite-length): number of child items
+* Map (definite-length): number of key-value pairs
+
+For **indefinite-length** strings, arrays, and maps, `cbor_get_item_size()`
+returns the raw CBOR length field, which is the sentinel
+`(size_t)CBOR_INDEFINITE_VALUE`. In that case, the number of child items / key-
+value pairs is not known up front; iterate until the CBOR BREAK marker is
+encountered instead of using `cbor_get_item_size()` as a count.
+
+Example (`0xA2 0x61 0x61 0x01 0x61 0x62 0x02`, equivalent to
+`{"a": 1, "b": 2}`):
+
+* 1 map item
+* 2 key items (`"a"`, `"b"`)
+* 2 value items (`1`, `2`)
+* total parsed item count (`n`) = 5
+
+### Sizing `MAX_ITEMS` (pre-estimation)
+
+Use `cbor_count_items()` for dry-run counting without allocating `cbor_item_t`
+buffer:
+
+```c
+size_t needed_items = 0;
+cbor_error_t err = cbor_count_items(cbor_message, cbor_message_len,
+		&needed_items);
+if (err == CBOR_SUCCESS) {
+	/* allocate items[needed_items + margin] */
+}
+```
+
+In practice, use one of the following:
+
+1. Reserve a conservative static capacity based on your schema, or
+2. Call `cbor_count_items()` first, then set production `MAX_ITEMS` with margin.
+
+### Error when item capacity is not enough
+
+If `items[]` is too small to hold all parsed nodes, `cbor_parse()` returns
+`CBOR_OVERRUN` (stringified as `"out of memory"`).
+
+```c
+cbor_error_t err = cbor_parse(&reader, msg, msglen, &n);
+if (err == CBOR_OVERRUN) {
+	/* items[] capacity is insufficient: increase maxitems */
+}
+```
+
+In this case, `n` contains only the number of items actually stored before the
+overrun.
+
+## Tools
+
+### Item counter script
+
+You can estimate item count from CBOR bytes with:
+
+```bash
+python3 tools/cbor_item_count.py --hex "A2 61 61 01 61 62 02"
+```
+
+or from file:
+
+```bash
+python3 tools/cbor_item_count.py --file ./message.cbor
+```
+
+If your build overrides `CBOR_RECURSION_MAX_LEVEL`, pass the same depth to the
+script so it matches parser behavior:
+
+```bash
+python3 tools/cbor_item_count.py --file ./message.cbor --max-depth 16
+```
+
+The script prints parser-compatible status (`CBOR_SUCCESS`, `CBOR_BREAK`,
+`CBOR_ILLEGAL`, etc.) and counted item number.
 
 ### Decoder
 

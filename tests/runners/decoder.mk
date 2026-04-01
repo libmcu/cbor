@@ -9,6 +9,8 @@ SRC_FILES = \
 
 TEST_SRC_FILES = \
 	src/decoder_test.cpp \
+	src/parser_count_test.cpp \
+	src/tool_item_count_test.cpp \
 	src/test_all.cpp \
 
 INCLUDE_DIRS = \
@@ -16,6 +18,7 @@ INCLUDE_DIRS = \
 	$(CPPUTEST_HOME)/include \
 
 MOCKS_SRC_DIRS =
-CPPUTEST_CPPFLAGS =
+CPPUTEST_CPPFLAGS += \
+	-DCBOR_PROJECT_ROOT=\"$(abspath ..)\"
 
 include MakefileRunner.mk
