@@ -38,8 +38,15 @@ static const struct cbor_parser *get_parser(const struct parser_ctx *ctx,
 	return NULL;
 }
 
+/* Internal callback type used by iterate_each().
+ * logical_idx is the 0-based position of this item among its logical siblings
+ * (TAG items do not increment the index). */
+typedef void (*iter_cb_t)(const cbor_reader_t *reader,
+		const cbor_item_t *item, const cbor_item_t *parent,
+		size_t logical_idx, void *arg);
+
 static void parse_item(const cbor_reader_t *reader, const cbor_item_t *item,
-		const cbor_item_t *parent, void *arg)
+		const cbor_item_t *parent, size_t logical_idx, void *arg)
 {
 	struct parser_ctx *ctx = (struct parser_ctx *)arg;
 	const void *strkey = NULL;
@@ -52,15 +59,8 @@ static void parse_item(const cbor_reader_t *reader, const cbor_item_t *item,
 	}
 
 	if (parent && parent->type == CBOR_ITEM_MAP) {
-		/* Count non-TAG items from parent+1 to item to get logical
-		 * position, so TAG slots do not disturb key/value detection. */
-		size_t pos = 0;
-		for (const cbor_item_t *p = parent + 1; p <= item; p++) {
-			if (p->type != CBOR_ITEM_TAG) {
-				pos++;
-			}
-		}
-		if (pos % 2 == 1) { /* key position — odd (1-indexed) */
+		/* logical_idx is 0-based: even = key, odd = value */
+		if (logical_idx % 2 == 0) {
 			return;
 		}
 
@@ -134,9 +134,7 @@ static iter_action_t get_iter_action(const cbor_item_t *item,
 static size_t iterate_each(const cbor_reader_t *reader,
 		const cbor_item_t *items, size_t nr_items, size_t max_nodes,
 		const cbor_item_t *parent,
-		void (*callback_each)(const cbor_reader_t *reader,
-				const cbor_item_t *item,
-				const cbor_item_t *parent, void *arg),
+		iter_cb_t callback_each,
 		void *arg)
 {
 	size_t extra = 0;
@@ -152,7 +150,7 @@ static size_t iterate_each(const cbor_reader_t *reader,
 
 		switch (get_iter_action(item, remaining_nodes, &len)) {
 		case ITER_RECURSE_CALLBACK_FIRST:
-			(*callback_each)(reader, item, parent, arg);
+			(*callback_each)(reader, item, parent, i, arg);
 			/* fall through */
 		case ITER_RECURSE:
 			extra += iterate_each(reader, item + 1, len,
@@ -166,7 +164,7 @@ static size_t iterate_each(const cbor_reader_t *reader,
 			 * consume a logical iteration slot. Advance the physical
 			 * extra counter and re-process the same logical index so
 			 * the wrapped item is seen under the original parent. */
-			(*callback_each)(reader, item, parent, arg);
+			(*callback_each)(reader, item, parent, i, arg);
 			extra++;
 			i--;	/* neutralised by the for-loop's i++ */
 			continue;
@@ -184,10 +182,27 @@ static size_t iterate_each(const cbor_reader_t *reader,
 			break;
 		}
 
-		(*callback_each)(reader, item, parent, arg);
+		(*callback_each)(reader, item, parent, i, arg);
 	}
 
 	return i + extra;
+}
+
+/* Trampoline: adapts the public cbor_iterate() callback (no logical_idx) to
+ * the internal iter_cb_t signature so callers are not affected. */
+struct iterate_wrap {
+	void (*cb)(const cbor_reader_t *, const cbor_item_t *,
+		   const cbor_item_t *, void *);
+	void *arg;
+};
+
+static void iterate_trampoline(const cbor_reader_t *reader,
+		const cbor_item_t *item, const cbor_item_t *parent,
+		size_t logical_idx, void *arg)
+{
+	(void)logical_idx;
+	const struct iterate_wrap *w = (const struct iterate_wrap *)arg;
+	w->cb(reader, item, parent, w->arg);
 }
 
 bool cbor_unmarshal(cbor_reader_t *reader, const struct cbor_parser *parsers,
@@ -217,8 +232,9 @@ size_t cbor_iterate(const cbor_reader_t *reader, const cbor_item_t *parent,
 				const cbor_item_t *parent, void *arg),
 		void *arg)
 {
+	struct iterate_wrap wrap = { callback_each, arg };
 	return iterate_each(reader, reader->items, reader->itemidx,
-			reader->itemidx, parent, callback_each, arg);
+			reader->itemidx, parent, iterate_trampoline, &wrap);
 }
 
 const char *cbor_stringify_error(cbor_error_t err)

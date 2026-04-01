@@ -306,9 +306,9 @@ TEST(TagEncoder, ShouldEncodeNestedTags)
 
 TEST(TagEncoder, ShouldReturnOverrun_WhenBufferTooSmall)
 {
-	uint8_t tiny[0];
+	uint8_t tiny[1];
 	cbor_writer_t w;
-	cbor_writer_init(&w, tiny, sizeof(tiny));
+	cbor_writer_init(&w, tiny, 0u);
 
 	LONGS_EQUAL(CBOR_OVERRUN, cbor_encode_tag(&w, 1));
 }
