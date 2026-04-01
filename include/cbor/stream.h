@@ -13,6 +13,9 @@ extern "C" {
 
 #include "cbor/base.h"
 
+typedef char cbor_stream_depth_must_fit_uint8_t[
+	(CBOR_RECURSION_MAX_LEVEL < 256) ? 1 : -1];
+
 typedef enum {
 	CBOR_STREAM_EVENT_UINT,
 	CBOR_STREAM_EVENT_INT,

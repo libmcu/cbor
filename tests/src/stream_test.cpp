@@ -168,7 +168,7 @@ TEST(StreamInteger, ShouldEmitUint_WhenSmallUintGiven)
 
 	LONGS_EQUAL(1, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_UINT, rec.events[0].type);
-	LONGS_EQUAL(5, rec.events[0].uint_val);
+	LONGLONGS_EQUAL(5ull, rec.events[0].uint_val);
 	LONGS_EQUAL(0, rec.events[0].depth);
 }
 
@@ -179,7 +179,7 @@ TEST(StreamInteger, ShouldEmitUint_WhenOneByteLengthGiven)
 
 	LONGS_EQUAL(1, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_UINT, rec.events[0].type);
-	LONGS_EQUAL(255, rec.events[0].uint_val);
+	LONGLONGS_EQUAL(255ull, rec.events[0].uint_val);
 }
 
 TEST(StreamInteger, ShouldEmitUint_WhenTwoByteLengthGiven)
@@ -189,7 +189,7 @@ TEST(StreamInteger, ShouldEmitUint_WhenTwoByteLengthGiven)
 
 	LONGS_EQUAL(1, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_UINT, rec.events[0].type);
-	LONGS_EQUAL(256, rec.events[0].uint_val);
+	LONGLONGS_EQUAL(256ull, rec.events[0].uint_val);
 }
 
 TEST(StreamInteger, ShouldEmitNegInt_WhenNegativeIntegerGiven)
@@ -199,7 +199,7 @@ TEST(StreamInteger, ShouldEmitNegInt_WhenNegativeIntegerGiven)
 
 	LONGS_EQUAL(1, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_INT, rec.events[0].type);
-	LONGS_EQUAL(-1, rec.events[0].sint_val);
+	LONGLONGS_EQUAL(-1ll, rec.events[0].sint_val);
 }
 
 TEST(StreamInteger, ShouldEmitNegInt_WhenNeg100Given)
@@ -209,7 +209,7 @@ TEST(StreamInteger, ShouldEmitNegInt_WhenNeg100Given)
 
 	LONGS_EQUAL(1, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_INT, rec.events[0].type);
-	LONGS_EQUAL(-100, rec.events[0].sint_val);
+	LONGLONGS_EQUAL(-100ll, rec.events[0].sint_val);
 }
 
 TEST(StreamInteger, ShouldEmitMultipleUints_WhenFedByteByByte)
@@ -218,9 +218,9 @@ TEST(StreamInteger, ShouldEmitMultipleUints_WhenFedByteByByte)
 	feed_byte_by_byte(&decoder, msg, sizeof(msg));
 
 	LONGS_EQUAL(3, rec.count);
-	LONGS_EQUAL(1, rec.events[0].uint_val);
-	LONGS_EQUAL(2, rec.events[1].uint_val);
-	LONGS_EQUAL(3, rec.events[2].uint_val);
+	LONGLONGS_EQUAL(1ull, rec.events[0].uint_val);
+	LONGLONGS_EQUAL(2ull, rec.events[1].uint_val);
+	LONGLONGS_EQUAL(3ull, rec.events[2].uint_val);
 }
 
 /* ---------- TEST_GROUP: Strings ---------- */
@@ -259,7 +259,7 @@ TEST(StreamString, ShouldEmitTextString_WhenShortTextGiven)
 	LONGS_EQUAL(CBOR_STREAM_EVENT_TEXT, rec.events[0].type);
 	LONGS_EQUAL(1, rec.events[0].str_len);
 	LONGS_EQUAL('a', rec.events[0].str_buf[0]);
-	LONGS_EQUAL(1, rec.events[0].str_total);
+	LONGLONGS_EQUAL(1ll, rec.events[0].str_total);
 	CHECK(rec.events[0].str_first);
 	CHECK(rec.events[0].str_last);
 }
@@ -331,7 +331,7 @@ TEST(StreamIndefString, ShouldEmitSingleBreakChunk_WhenEmptyIndefStringGiven)
 	LONGS_EQUAL(1, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_BYTES, rec.events[0].type);
 	LONGS_EQUAL(0, rec.events[0].str_len);
-	LONGS_EQUAL(-1, rec.events[0].str_total);
+	LONGLONGS_EQUAL(-1ll, rec.events[0].str_total);
 	CHECK(rec.events[0].str_first);
 	CHECK(rec.events[0].str_last);
 }
@@ -349,7 +349,7 @@ TEST(StreamIndefString, ShouldEmitSubChunkThenBreak_WhenIndefStringWithDataGiven
 	LONGS_EQUAL(2, rec.events[0].str_len);
 	LONGS_EQUAL(0x01, rec.events[0].str_buf[0]);
 	LONGS_EQUAL(0x02, rec.events[0].str_buf[1]);
-	LONGS_EQUAL(-1, rec.events[0].str_total);
+	LONGLONGS_EQUAL(-1ll, rec.events[0].str_total);
 	CHECK(rec.events[0].str_first);
 	CHECK(!rec.events[0].str_last);
 
@@ -485,7 +485,7 @@ TEST(StreamArray, ShouldEmitStartEnd_WhenEmptyArrayGiven)
 
 	LONGS_EQUAL(2, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_ARRAY_START, rec.events[0].type);
-	LONGS_EQUAL(0, rec.events[0].container_size);
+	LONGLONGS_EQUAL(0ll, rec.events[0].container_size);
 	LONGS_EQUAL(0, rec.events[0].depth);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_ARRAY_END, rec.events[1].type);
 	LONGS_EQUAL(0, rec.events[1].depth);
@@ -499,14 +499,14 @@ TEST(StreamArray, ShouldEmitItemsWithCorrectDepth_WhenDefiniteArrayGiven)
 	LONGS_EQUAL(4, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_ARRAY_START, rec.events[0].type);
 	LONGS_EQUAL(0, rec.events[0].depth);
-	LONGS_EQUAL(2, rec.events[0].container_size);
+	LONGLONGS_EQUAL(2ll, rec.events[0].container_size);
 
 	LONGS_EQUAL(CBOR_STREAM_EVENT_UINT, rec.events[1].type);
 	LONGS_EQUAL(1, rec.events[1].depth);
-	LONGS_EQUAL(1, rec.events[1].uint_val);
+	LONGLONGS_EQUAL(1ull, rec.events[1].uint_val);
 
 	LONGS_EQUAL(CBOR_STREAM_EVENT_UINT, rec.events[2].type);
-	LONGS_EQUAL(2, rec.events[2].uint_val);
+	LONGLONGS_EQUAL(2ull, rec.events[2].uint_val);
 
 	LONGS_EQUAL(CBOR_STREAM_EVENT_ARRAY_END, rec.events[3].type);
 	LONGS_EQUAL(0, rec.events[3].depth);
@@ -539,7 +539,7 @@ TEST(StreamArray, ShouldEmitIndefiniteArray_WhenIndefArrayGiven)
 
 	LONGS_EQUAL(4, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_ARRAY_START, rec.events[0].type);
-	LONGS_EQUAL(-1, rec.events[0].container_size);
+	LONGLONGS_EQUAL(-1ll, rec.events[0].container_size);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_UINT, rec.events[1].type);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_UINT, rec.events[2].type);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_ARRAY_END, rec.events[3].type);
@@ -603,7 +603,7 @@ TEST(StreamMap, ShouldReportPairCount_WhenDefiniteMapGiven)
 	feed_all(&decoder, msg, sizeof(msg));
 
 	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_START, rec.events[0].type);
-	LONGS_EQUAL(2, rec.events[0].container_size);
+	LONGLONGS_EQUAL(2ll, rec.events[0].container_size);
 }
 
 TEST(StreamMap, ShouldEmitMultiplePairs_WhenMultiPairMapGiven)
@@ -627,7 +627,7 @@ TEST(StreamMap, ShouldEmitIndefiniteMap_WhenIndefMapGiven)
 
 	LONGS_EQUAL(4, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_START, rec.events[0].type);
-	LONGS_EQUAL(-1, rec.events[0].container_size);
+	LONGLONGS_EQUAL(-1ll, rec.events[0].container_size);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_END, rec.events[3].type);
 }
 
@@ -660,8 +660,8 @@ TEST(StreamTag, ShouldSetHasTag_WhenTaggedItemGiven)
 	LONGS_EQUAL(1, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_UINT, rec.events[0].type);
 	CHECK(rec.events[0].has_tag);
-	LONGS_EQUAL(1, rec.events[0].tag);
-	LONGS_EQUAL(0, rec.events[0].uint_val);
+	LONGLONGS_EQUAL(1ull, rec.events[0].tag);
+	LONGLONGS_EQUAL(0ull, rec.events[0].uint_val);
 }
 
 TEST(StreamTag, ShouldSetHasTagOnStart_WhenTaggedArrayGiven)
@@ -673,7 +673,7 @@ TEST(StreamTag, ShouldSetHasTagOnStart_WhenTaggedArrayGiven)
 	LONGS_EQUAL(2, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_ARRAY_START, rec.events[0].type);
 	CHECK(rec.events[0].has_tag);
-	LONGS_EQUAL(0, rec.events[0].tag);
+	LONGLONGS_EQUAL(0ull, rec.events[0].tag);
 
 	LONGS_EQUAL(CBOR_STREAM_EVENT_ARRAY_END, rec.events[1].type);
 	CHECK(!rec.events[1].has_tag);
@@ -875,7 +875,7 @@ TEST(StreamReset, ShouldDecodeAfterReset_WhenPreviouslyErrored)
 
 	LONGS_EQUAL(1, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_UINT, rec.events[0].type);
-	LONGS_EQUAL(5, rec.events[0].uint_val);
+	LONGLONGS_EQUAL(5ull, rec.events[0].uint_val);
 }
 
 TEST(StreamReset, ShouldPreserveCallback_WhenResetCalled)
