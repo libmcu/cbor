@@ -102,6 +102,16 @@ TEST(Encoder, WhenNegativeIntegerGiven) {
 	MEMCMP_EQUAL(expected, writer.buf, sizeof(expected));
 }
 
+TEST(Encoder, ShouldReturnInvalid_WhenZeroGivenForNegativeInteger) {
+	LONGS_EQUAL(CBOR_INVALID, cbor_encode_negative_integer(&writer, 0));
+	LONGS_EQUAL(0, writer.bufidx);
+}
+
+TEST(Encoder, ShouldReturnInvalid_WhenPositiveGivenForNegativeInteger) {
+	LONGS_EQUAL(CBOR_INVALID, cbor_encode_negative_integer(&writer, 1));
+	LONGS_EQUAL(0, writer.bufidx);
+}
+
 TEST(Encoder, WhenEncodedLengthByteStringGiven) {
 	for (int i = 0; i < 23; i++) {
 		LONGS_EQUAL(CBOR_SUCCESS, cbor_encode_byte_string(&writer,
