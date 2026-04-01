@@ -105,7 +105,8 @@ static cbor_error_t push_container(cbor_stream_decoder_t *d,
 		? CBOR_STREAM_EVENT_ARRAY_START : CBOR_STREAM_EVENT_MAP_START;
 
 	build_event(d, evtype, &event);
-	data.container.size = count;
+	data.container.size = (type == CBOR_ITEM_MAP && count >= 0)
+		? (count / 2) : count;
 
 	cbor_error_t err = invoke_cb(d, &event, &data);
 	if (err != CBOR_SUCCESS) {
@@ -433,19 +434,25 @@ static cbor_error_t process_float_simple_length(cbor_stream_decoder_t *d)
 
 static cbor_error_t process_length_complete(cbor_stream_decoder_t *d)
 {
+	cbor_error_t err;
+
 	d->state = STREAM_STATE_IDLE;
 
 	switch (d->major_type) {
-	case 0: return emit_uint(d);
-	case 1: return emit_int(d);
+	case 0: err = emit_uint(d); break;
+	case 1: err = emit_int(d); break;
 	case 2: /* fall-through */
-	case 3: return process_string_length(d);
+	case 3: err = process_string_length(d); break;
 	case 4: /* fall-through */
-	case 5: return process_container_length(d);
-	case 6: return process_tag_length(d);
-	case 7: return process_float_simple_length(d);
-	default: return CBOR_ILLEGAL;
+	case 5: err = process_container_length(d); break;
+	case 6: err = process_tag_length(d); break;
+	case 7: err = process_float_simple_length(d); break;
+	default: err = CBOR_ILLEGAL; break;
 	}
+
+	d->following_bytes = 0;
+	d->following_bytes_read = 0;
+	return err;
 }
 
 static cbor_error_t handle_indefinite(cbor_stream_decoder_t *d)

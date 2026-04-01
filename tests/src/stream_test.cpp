@@ -575,6 +575,15 @@ TEST(StreamMap, ShouldSetIsMapKey_WhenInsideMap)
 	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_END, rec.events[3].type);
 }
 
+TEST(StreamMap, ShouldReportPairCount_WhenDefiniteMapGiven)
+{
+	uint8_t msg[] = { 0xa2, 0x01, 0x02, 0x03, 0x04 };
+	feed_all(&decoder, msg, sizeof(msg));
+
+	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_START, rec.events[0].type);
+	LONGS_EQUAL(2, rec.events[0].container_size);
+}
+
 TEST(StreamMap, ShouldEmitMultiplePairs_WhenMultiPairMapGiven)
 {
 	/* {1:2, 3:4} = 0xa2 0x01 0x02 0x03 0x04 */
@@ -771,10 +780,28 @@ TEST(StreamError, ShouldReturnNeedMore_WhenFinishCalledInsideOpenArray)
 	LONGS_EQUAL(CBOR_NEED_MORE, cbor_stream_finish(&decoder));
 }
 
+TEST(StreamError, ShouldReturnSuccess_WhenFinishCalledAfterCompleteLengthEncodedUint)
+{
+	uint8_t msg[] = { 0x18, 0x01 };
+	feed_all(&decoder, msg, sizeof(msg));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_finish(&decoder));
+}
+
 TEST(StreamError, ShouldReturnSuccess_WhenFinishCalledAfterCompleteItem)
 {
 	uint8_t msg[] = { 0x01 };
 	feed_all(&decoder, msg, sizeof(msg));
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_finish(&decoder));
+}
+
+TEST(StreamError, ShouldTreatZeroLengthFeedAsNoOp)
+{
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_feed(&decoder, NULL, 0));
+
+	uint8_t msg[] = { 0x01 };
+	feed_all(&decoder, msg, sizeof(msg));
+
+	LONGS_EQUAL(1, rec.count);
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_finish(&decoder));
 }
 

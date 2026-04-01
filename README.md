@@ -199,7 +199,8 @@ static bool on_event(const cbor_stream_event_t *event,
         break;
     case CBOR_STREAM_EVENT_TEXT:
         printf("text: %.*s (first=%d last=%d)\n",
-                (int)data->str.len, data->str.ptr,
+                data->str.ptr ? (int)data->str.len : 0,
+                data->str.ptr ? (const char *)data->str.ptr : "",
                 data->str.first, data->str.last);
         break;
     case CBOR_STREAM_EVENT_MAP_START:

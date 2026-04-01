@@ -112,7 +112,8 @@ void cbor_stream_init(cbor_stream_decoder_t *decoder,
 /**
  * Feed bytes into the decoder.
  *
- * May be called repeatedly with any chunk size >=1 byte.
+ * May be called repeatedly with any chunk size >=0 bytes.
+ * A zero-length feed is treated as a no-op and @p data may be NULL.
  * After any non-CBOR_SUCCESS return the decoder enters a sticky error state;
  * subsequent calls return the same error immediately.
  *
