@@ -36,7 +36,9 @@ cbor_error_t cbor_parse(cbor_reader_t *reader, void const *msg, size_t msgsize,
  *             is an error, and then indicates the number of items counted
  *             before the parser stopped.
  *
- * @return a code of @ref cbor_error_t
+ * @return a code of @ref cbor_error_t. Unlike @ref cbor_parse(),
+ *         well-formed indefinite-length items do not cause this function to
+ *         return @ref CBOR_BREAK; they are reported as @ref CBOR_SUCCESS.
  */
 cbor_error_t cbor_count_items(void const *msg, size_t msgsize,
 		size_t *nitems_counted);
