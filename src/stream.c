@@ -576,7 +576,6 @@ void cbor_stream_init(cbor_stream_decoder_t *decoder,
 		cbor_stream_callback_t callback, void *arg)
 {
 	assert(decoder != NULL);
-	assert(callback != NULL);
 
 	if (decoder == NULL) {
 		return;
