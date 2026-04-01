@@ -284,6 +284,11 @@ static cbor_error_t handle_break(cbor_stream_decoder_t *d)
 		return CBOR_ILLEGAL;
 	}
 
+	if (d->stack[d->depth - 1].type == CBOR_ITEM_MAP &&
+			!d->stack[d->depth - 1].is_key) {
+		return CBOR_ILLEGAL;
+	}
+
 	/* indefinite container terminated by BREAK */
 	cbor_error_t err = emit_container_end(d);
 	if (err != CBOR_SUCCESS) {
@@ -647,7 +652,8 @@ cbor_error_t cbor_stream_finish(cbor_stream_decoder_t *decoder)
 
 	if (decoder->state != STREAM_STATE_IDLE || decoder->depth > 0 ||
 			decoder->in_indef_str ||
-			decoder->following_bytes_read > 0) {
+			decoder->following_bytes_read > 0 ||
+			decoder->has_pending_tag) {
 		return CBOR_NEED_MORE;
 	}
 

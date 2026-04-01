@@ -254,8 +254,8 @@ carry chunk metadata in `data->str`:
 | `last` | `true` on the last chunk |
 
 A definite-length string may arrive in multiple chunks when the payload
-spans several `cbor_stream_feed()` calls. An indefinite-length string emits
-one chunk per CBOR sub-chunk, followed by a zero-length chunk with
+spans several `cbor_stream_feed()` calls. An indefinite-length string may emit
+one or more chunks per CBOR sub-chunk, followed by a zero-length chunk with
 `last = true` for the BREAK terminator.
 
 **Container events** (`_ARRAY_START` / `_MAP_START`) carry

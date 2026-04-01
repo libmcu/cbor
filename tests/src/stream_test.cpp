@@ -609,6 +609,12 @@ TEST(StreamMap, ShouldEmitIndefiniteMap_WhenIndefMapGiven)
 	LONGS_EQUAL(CBOR_STREAM_EVENT_MAP_END, rec.events[3].type);
 }
 
+TEST(StreamMap, ShouldReturnIllegal_WhenBreakFollowsOnlyMapKey)
+{
+	uint8_t msg[] = { 0xbf, 0x01, 0xff };
+	LONGS_EQUAL(CBOR_ILLEGAL, cbor_stream_feed(&decoder, msg, sizeof(msg)));
+}
+
 /* ---------- TEST_GROUP: Tags ---------- */
 
 TEST_GROUP(StreamTag)
@@ -776,6 +782,13 @@ TEST(StreamError, ShouldReturnNeedMore_WhenFinishCalledMidPayload)
 TEST(StreamError, ShouldReturnNeedMore_WhenFinishCalledInsideOpenArray)
 {
 	uint8_t msg[] = { 0x9f, 0x01 }; /* [_ 1, ... */
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_feed(&decoder, msg, sizeof(msg)));
+	LONGS_EQUAL(CBOR_NEED_MORE, cbor_stream_finish(&decoder));
+}
+
+TEST(StreamError, ShouldReturnNeedMore_WhenFinishCalledAfterBareTag)
+{
+	uint8_t msg[] = { 0xc0 };
 	LONGS_EQUAL(CBOR_SUCCESS, cbor_stream_feed(&decoder, msg, sizeof(msg)));
 	LONGS_EQUAL(CBOR_NEED_MORE, cbor_stream_finish(&decoder));
 }
