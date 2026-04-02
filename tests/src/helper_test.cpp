@@ -338,3 +338,8 @@ TEST(Helper, unmarshal_ShouldInvokeCallbacks_WhenIndefiniteMapGiven)
 					 sizeof(parsers) / sizeof(*parsers),
 					 msg, sizeof(msg), nullptr));
 }
+
+TEST(Helper, ShouldStringifyExcessiveWhenLimitExceeded)
+{
+	STRCMP_EQUAL("excessive nesting", cbor_stringify_error(CBOR_EXCESSIVE));
+}

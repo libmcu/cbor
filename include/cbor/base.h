@@ -33,7 +33,7 @@ typedef enum {
 	CBOR_INVALID, /**< well-formed but invalid */
 	CBOR_OVERRUN, /**< more items than given buffer space */
 	CBOR_BREAK,
-	CBOR_EXCESSIVE, /**< recursion more than @ref CBOR_RECURSION_MAX_LEVEL */
+	CBOR_EXCESSIVE, /**< nesting exceeded implementation limits */
 	CBOR_NEED_MORE, /**< stream ended before item was complete */
 	CBOR_ABORTED,   /**< callback returned false; parsing stopped */
 } cbor_error_t;

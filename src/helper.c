@@ -249,7 +249,7 @@ const char *cbor_stringify_error(cbor_error_t err)
 	case CBOR_BREAK:
 		return "break";
 	case CBOR_EXCESSIVE:
-		return "too deep recursion";
+		return "excessive nesting";
 	case CBOR_NEED_MORE:
 		return "need more data";
 	case CBOR_ABORTED:

@@ -27,6 +27,7 @@ struct RecordedEvent {
 	uint8_t  str_buf[256];
 	size_t   str_len;
 	int64_t  str_total;
+	bool     str_ptr_is_null;
 	bool     str_first;
 	bool     str_last;
 
@@ -94,6 +95,7 @@ static bool record_cb(const cbor_stream_event_t *event,
 	case CBOR_STREAM_EVENT_BYTES:
 	case CBOR_STREAM_EVENT_TEXT:
 		ev.str_total = data->str.total;
+		ev.str_ptr_is_null = (data->str.ptr == NULL);
 		ev.str_first = data->str.first;
 		ev.str_last  = data->str.last;
 		ev.str_len   = data->str.len;
@@ -244,6 +246,7 @@ TEST(StreamString, ShouldEmitEmptyTextString_WhenZeroLengthTextGiven)
 	LONGS_EQUAL(1, rec.count);
 	LONGS_EQUAL(CBOR_STREAM_EVENT_TEXT, rec.events[0].type);
 	LONGS_EQUAL(0, rec.events[0].str_len);
+	CHECK(rec.events[0].str_ptr_is_null);
 	CHECK(rec.events[0].str_first);
 	CHECK(rec.events[0].str_last);
 }
@@ -330,6 +333,7 @@ TEST(StreamIndefString, ShouldEmitSingleBreakChunk_WhenEmptyIndefStringGiven)
 	LONGS_EQUAL(CBOR_STREAM_EVENT_BYTES, rec.events[0].type);
 	LONGS_EQUAL(0, rec.events[0].str_len);
 	LONGLONGS_EQUAL(-1ll, rec.events[0].str_total);
+	CHECK(rec.events[0].str_ptr_is_null);
 	CHECK(rec.events[0].str_first);
 	CHECK(rec.events[0].str_last);
 }
@@ -353,6 +357,7 @@ TEST(StreamIndefString, ShouldEmitSubChunkThenBreak_WhenIndefStringWithDataGiven
 
 	/* BREAK chunk */
 	LONGS_EQUAL(0, rec.events[1].str_len);
+	CHECK(rec.events[1].str_ptr_is_null);
 	CHECK(!rec.events[1].str_first);
 	CHECK(rec.events[1].str_last);
 }
@@ -370,6 +375,7 @@ TEST(StreamIndefString, ShouldEmitTextChunks_WhenIndefTextStringGiven)
 	CHECK(rec.events[0].str_first);
 	CHECK(rec.events[2].str_last);
 	LONGS_EQUAL(0, rec.events[2].str_len); /* BREAK chunk */
+	CHECK(rec.events[2].str_ptr_is_null);
 }
 
 TEST(StreamIndefString, ShouldReturnIllegal_WhenWrongMajorTypeInIndefString)

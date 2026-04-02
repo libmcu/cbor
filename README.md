@@ -213,10 +213,11 @@ static bool on_event(const cbor_stream_event_t *event,
     case CBOR_STREAM_EVENT_TEXT:
         printf("text[%zu/%lld]: %.*s\n",
                data->str.len, (long long)data->str.total,
-               (int)data->str.len, (const char *)data->str.ptr);
+               (int)data->str.len,
+               data->str.ptr ? (const char *)data->str.ptr : "");
         break;
     case CBOR_STREAM_EVENT_BYTES:
-        /* data->str.ptr points directly into the caller's buffer */
+        /* data->str.ptr points into the caller's buffer, or is NULL when len == 0 */
         break;
     case CBOR_STREAM_EVENT_ARRAY_START:
         printf("array(%lld) depth=%u\n",
@@ -286,7 +287,7 @@ if (cbor_stream_feed(&decoder, bad_data, len) != CBOR_SUCCESS) {
 | --- | --- | --- |
 | `CBOR_STREAM_EVENT_UINT` | `data->uint` | unsigned integer |
 | `CBOR_STREAM_EVENT_INT` | `data->sint` | negative integer |
-| `CBOR_STREAM_EVENT_BYTES` / `_TEXT` | `data->str` | `ptr` into caller's buffer; chunked for long/indefinite strings |
+| `CBOR_STREAM_EVENT_BYTES` / `_TEXT` | `data->str` | `ptr` into caller's buffer, or `NULL` when `len == 0`; indefinite strings end with a final zero-length BREAK chunk carrying `last=true` |
 | `CBOR_STREAM_EVENT_ARRAY_START` / `_END` | `data->container.size` (`-1` if indefinite) / NULL | container open/close |
 | `CBOR_STREAM_EVENT_MAP_START` / `_END` | `data->container.size` (`-1` if indefinite) / NULL | `event->is_map_key` tracks key/value position |
 | `CBOR_STREAM_EVENT_TAG` | `data->tag` | emitted before the wrapped item's event(s) |
@@ -303,7 +304,7 @@ if (cbor_stream_feed(&decoder, bad_data, len) != CBOR_SUCCESS) {
 | `CBOR_NEED_MORE` | `finish()` called with an incomplete item or open container |
 | `CBOR_ILLEGAL` | reserved additional-info byte; malformed encoding |
 | `CBOR_INVALID` | well-formed but semantically invalid (e.g. negative integer overflows `int64`) |
-| `CBOR_EXCESSIVE` | nesting deeper than `CBOR_RECURSION_MAX_LEVEL` |
+| `CBOR_EXCESSIVE` | nesting deeper than `CBOR_RECURSION_MAX_LEVEL` or tag nesting beyond `CBOR_STREAM_MAX_PENDING_TAGS` |
 | `CBOR_ABORTED` | callback returned `false` |
 
 After any non-`CBOR_SUCCESS` return the decoder is in a sticky error state.

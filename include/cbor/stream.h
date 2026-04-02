@@ -72,12 +72,21 @@ typedef union {
 	int64_t  sint;           /**< CBOR_STREAM_EVENT_INT */
 
 	struct {
-		const uint8_t *ptr;   /**< direct pointer into caller's chunk buffer */
-		size_t         len;   /**< bytes in this chunk */
-		int64_t        total; /**< declared total length; -1 if indefinite */
-		bool           first; /**< this is the first chunk */
-		bool           last;  /**< this is the last chunk */
-	} str;                    /**< CBOR_STREAM_EVENT_BYTES / _TEXT */
+		const uint8_t *ptr;   /**< direct pointer into caller's chunk buffer,
+					 or NULL when len == 0 */
+		size_t         len;   /**< bytes in this chunk; may be 0 for empty
+					 strings and the final BREAK chunk of
+					 indefinite-length strings */
+		int64_t        total; /**< declared total length; -1 if indefinite,
+					 including the final BREAK chunk */
+		bool           first; /**< true for the first chunk; also true for
+					 the only empty chunk of a definite
+					 string */
+		bool           last;  /**< true for the final chunk; for
+					 indefinite-length strings this is the
+					 zero-length BREAK chunk */
+	} str;                    /**< CBOR_STREAM_EVENT_BYTES / _TEXT string data
+				      chunk */
 
 	struct {
 		int64_t size; /**< declared item count; -1 if indefinite */
