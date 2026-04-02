@@ -250,6 +250,10 @@ const char *cbor_stringify_error(cbor_error_t err)
 		return "break";
 	case CBOR_EXCESSIVE:
 		return "too deep recursion";
+	case CBOR_NEED_MORE:
+		return "need more data";
+	case CBOR_ABORTED:
+		return "aborted";
 	case CBOR_ILLEGAL: /* fall through */
 	default:
 		return "not well-formed";
