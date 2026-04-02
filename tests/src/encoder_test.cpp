@@ -525,3 +525,48 @@ TEST(Encoder, ShouldReturnOverrun_WhenNullTerminatedTextDoesNotFit) {
 	LONGS_EQUAL(0, small_writer.bufidx);
 	MEMCMP_EQUAL(before, small_buffer, sizeof(before));
 }
+
+TEST(Encoder, ShouldReturnOverrun_WhenHalfFloatDoesNotFit) {
+	cbor_writer_t small_writer;
+	uint8_t small_buffer[2]; /* half-float needs 3 bytes */
+	uint8_t before[sizeof(small_buffer)];
+
+	memset(small_buffer, 0xA5, sizeof(small_buffer));
+	memcpy(before, small_buffer, sizeof(before));
+	cbor_writer_init(&small_writer, small_buffer, sizeof(small_buffer));
+
+	/* 1.0f is shrinkable to half-float */
+	LONGS_EQUAL(CBOR_OVERRUN, cbor_encode_float(&small_writer, 1.0f));
+	LONGS_EQUAL(0, small_writer.bufidx);
+	MEMCMP_EQUAL(before, small_buffer, sizeof(before));
+}
+
+TEST(Encoder, ShouldReturnOverrun_WhenSingleFloatDoesNotFit) {
+	cbor_writer_t small_writer;
+	uint8_t small_buffer[4]; /* single-float needs 5 bytes */
+	uint8_t before[sizeof(small_buffer)];
+
+	memset(small_buffer, 0xA5, sizeof(small_buffer));
+	memcpy(before, small_buffer, sizeof(before));
+	cbor_writer_init(&small_writer, small_buffer, sizeof(small_buffer));
+
+	/* 1.1f is not shrinkable to half-float */
+	LONGS_EQUAL(CBOR_OVERRUN, cbor_encode_float(&small_writer, 1.1f));
+	LONGS_EQUAL(0, small_writer.bufidx);
+	MEMCMP_EQUAL(before, small_buffer, sizeof(before));
+}
+
+TEST(Encoder, ShouldReturnOverrun_WhenDoubleDoesNotFit) {
+	cbor_writer_t small_writer;
+	uint8_t small_buffer[8]; /* double needs 9 bytes */
+	uint8_t before[sizeof(small_buffer)];
+
+	memset(small_buffer, 0xA5, sizeof(small_buffer));
+	memcpy(before, small_buffer, sizeof(before));
+	cbor_writer_init(&small_writer, small_buffer, sizeof(small_buffer));
+
+	/* 1.1 (double) is not shrinkable to single */
+	LONGS_EQUAL(CBOR_OVERRUN, cbor_encode_double(&small_writer, 1.1));
+	LONGS_EQUAL(0, small_writer.bufidx);
+	MEMCMP_EQUAL(before, small_buffer, sizeof(before));
+}
