@@ -40,6 +40,11 @@ static size_t count_strlen(char const *text, size_t maxlen)
 	return len;
 }
 
+static bool is_overrun(const cbor_writer_t *writer, size_t bytes_needed)
+{
+	return bytes_needed > (writer->bufsize - writer->bufidx);
+}
+
 static cbor_error_t encode_core(cbor_writer_t *writer, uint8_t major_type,
 		uint8_t const *data, uint64_t datasize, bool indefinite)
 {
@@ -59,7 +64,7 @@ static cbor_error_t encode_core(cbor_writer_t *writer, uint8_t major_type,
 		bytes_to_write -= (size_t)datasize;
 	}
 
-	if (bytes_to_write > (writer->bufsize - writer->bufidx)) {
+	if (is_overrun(writer, bytes_to_write)) {
 		return CBOR_OVERRUN;
 	}
 
@@ -184,11 +189,19 @@ static cbor_error_t encode_float(cbor_writer_t *writer, float value)
 	if (ieee754_is_shrinkable_to_half(value)) {
 		uint16_t half = ieee754_convert_single_to_half(value);
 
+		if (is_overrun(writer, 1u + sizeof(half))) {
+			return CBOR_OVERRUN;
+		}
+
 		writer->buf[writer->bufidx++] = 0xF9;
 		writer->bufidx += cbor_copy(&writer->buf[writer->bufidx],
 				(uint8_t const *)&half, sizeof(half));
 
 		return CBOR_SUCCESS;
+	}
+
+	if (is_overrun(writer, 1u + sizeof(value))) {
+		return CBOR_OVERRUN;
 	}
 
 	writer->buf[writer->bufidx++] = 0xFA;
@@ -207,6 +220,10 @@ cbor_error_t cbor_encode_double(cbor_writer_t *writer, double value)
 {
 	if (ieee754_is_shrinkable_to_single(value)) {
 		return encode_float(writer, (float)value);
+	}
+
+	if (is_overrun(writer, 1u + sizeof(value))) {
+		return CBOR_OVERRUN;
 	}
 
 	writer->buf[writer->bufidx++] = 0xFB;

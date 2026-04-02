@@ -21,21 +21,10 @@ jobs:
         run: make -C tests install
       - name: Unit Test
         run: make -C tests
-      - name: Get Version
-        id: get_version
-        run: echo "::set-output name=VERSION::$(cat build/version.txt)"
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@latest
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.get_version.outputs.VERSION }}
-          release_name: ${{ steps.get_version.outputs.VERSION }}
-          body: |
-            ${{ steps.get_version.outputs.VERSION }}
-
-            ## Features
-            ## Bug Fixes
-          draft: false
-          prerelease: false
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
