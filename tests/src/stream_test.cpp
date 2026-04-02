@@ -819,7 +819,7 @@ TEST(StreamTag, ShouldReturnAborted_WhenCallbackReturnsFalseOnTagEvent)
 {
 	/* Abort on the TAG event itself */
 	rec.abort_after_first = true;
-	rec.abort_at = 1; /* abort after first event (the TAG) */
+	rec.abort_at = 0; /* zero-based: abort on first event (the TAG) */
 
 	uint8_t msg[] = { 0xc1, 0x00 };
 	LONGS_EQUAL(CBOR_ABORTED, cbor_stream_feed(&decoder, msg, sizeof(msg)));
