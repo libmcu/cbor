@@ -190,6 +190,126 @@ if (err == CBOR_OVERRUN) {
 In this case, `n` contains only the number of items actually stored before the
 overrun.
 
+### Streaming Decoder
+
+The streaming decoder processes CBOR byte-by-byte (or in any chunk size) without
+requiring the full message up front.  It issues events via a callback as each
+item is decoded, so it works on constrained systems where the complete payload
+may not fit in RAM at once.
+
+```c
+#include "cbor/stream.h"
+
+static bool on_event(const cbor_stream_event_t *event,
+        const cbor_stream_data_t *data, void *arg)
+{
+    switch (event->type) {
+    case CBOR_STREAM_EVENT_UINT:
+        printf("uint: %llu\n", (unsigned long long)data->uint);
+        break;
+    case CBOR_STREAM_EVENT_INT:
+        printf("int: %lld\n", (long long)data->sint);
+        break;
+    case CBOR_STREAM_EVENT_TEXT:
+        printf("text[%zu/%lld]: %.*s\n",
+               data->str.len, (long long)data->str.total,
+               (int)data->str.len, (const char *)data->str.ptr);
+        break;
+    case CBOR_STREAM_EVENT_BYTES:
+        /* data->str.ptr points directly into the caller's buffer */
+        break;
+    case CBOR_STREAM_EVENT_ARRAY_START:
+        printf("array(%lld) depth=%u\n",
+               (long long)data->container.size, event->depth);
+        break;
+    case CBOR_STREAM_EVENT_ARRAY_END:
+        break;
+    case CBOR_STREAM_EVENT_MAP_START:
+        printf("map(%lld) depth=%u key=%d\n",
+               (long long)data->container.size,
+               event->depth, event->is_map_key);
+        break;
+    case CBOR_STREAM_EVENT_MAP_END:
+        break;
+    case CBOR_STREAM_EVENT_TAG:
+        printf("tag(%llu)\n", (unsigned long long)data->tag);
+        break;
+    case CBOR_STREAM_EVENT_FLOAT:
+        printf("float: %g\n", data->flt);
+        break;
+    case CBOR_STREAM_EVENT_BOOL:
+        printf("bool: %s\n", data->boolean ? "true" : "false");
+        break;
+    case CBOR_STREAM_EVENT_NULL:
+        printf("null\n");
+        break;
+    default:
+        break;
+    }
+    return true; /* return false to abort decoding */
+}
+
+cbor_stream_decoder_t decoder;
+cbor_stream_init(&decoder, on_event, NULL);
+
+/* Feed any number of chunks — partial items are held in decoder state */
+cbor_error_t err = cbor_stream_feed(&decoder, chunk, chunk_len);
+if (err != CBOR_SUCCESS) {
+    /* handle error */
+}
+
+/* After the last chunk, verify the stream ended on a clean boundary */
+err = cbor_stream_finish(&decoder);
+```
+
+Feeding can be split across as many calls as needed:
+
+```c
+/* byte-at-a-time — fully supported */
+for (size_t i = 0; i < msg_len; i++) {
+    cbor_stream_feed(&decoder, &msg[i], 1);
+}
+cbor_stream_finish(&decoder);
+```
+
+To reuse the decoder after an error, call `cbor_stream_reset()`:
+
+```c
+if (cbor_stream_feed(&decoder, bad_data, len) != CBOR_SUCCESS) {
+    cbor_stream_reset(&decoder); /* clears error, preserves callback */
+}
+```
+
+#### Events
+
+| Event | `data` field | Notes |
+| --- | --- | --- |
+| `CBOR_STREAM_EVENT_UINT` | `data->uint` | unsigned integer |
+| `CBOR_STREAM_EVENT_INT` | `data->sint` | negative integer |
+| `CBOR_STREAM_EVENT_BYTES` / `_TEXT` | `data->str` | `ptr` into caller's buffer; chunked for long/indefinite strings |
+| `CBOR_STREAM_EVENT_ARRAY_START` / `_END` | `data->container.size` (`-1` if indefinite) / NULL | container open/close |
+| `CBOR_STREAM_EVENT_MAP_START` / `_END` | `data->container.size` (`-1` if indefinite) / NULL | `event->is_map_key` tracks key/value position |
+| `CBOR_STREAM_EVENT_TAG` | `data->tag` | emitted before the wrapped item's event(s) |
+| `CBOR_STREAM_EVENT_FLOAT` | `data->flt` | half/single/double all promoted to `double` |
+| `CBOR_STREAM_EVENT_BOOL` | `data->boolean` | |
+| `CBOR_STREAM_EVENT_NULL` / `_UNDEFINED` | NULL | |
+| `CBOR_STREAM_EVENT_SIMPLE` | `data->simple` | unassigned simple value |
+
+#### Error codes
+
+| Code | Meaning |
+| --- | --- |
+| `CBOR_SUCCESS` | all bytes consumed cleanly |
+| `CBOR_NEED_MORE` | `finish()` called with an incomplete item or open container |
+| `CBOR_ILLEGAL` | reserved additional-info byte; malformed encoding |
+| `CBOR_INVALID` | well-formed but semantically invalid (e.g. negative integer overflows `int64`) |
+| `CBOR_EXCESSIVE` | nesting deeper than `CBOR_RECURSION_MAX_LEVEL` |
+| `CBOR_ABORTED` | callback returned `false` |
+
+After any non-`CBOR_SUCCESS` return the decoder is in a sticky error state.
+Subsequent `feed()` / `finish()` calls return the same error immediately.
+Call `cbor_stream_reset()` to recover.
+
 ## Tools
 
 ### Item counter script
