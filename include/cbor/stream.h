@@ -170,9 +170,12 @@ void cbor_stream_init(cbor_stream_decoder_t *decoder,
  * A zero-length feed is treated as a no-op; @p data may be NULL in that case.
  * Partial items are held in decoder state and completed when more bytes arrive.
  *
- * After any non-CBOR_SUCCESS return the decoder enters a sticky error state;
- * subsequent calls return the same error immediately without processing bytes.
- * Call cbor_stream_reset() to clear the error and reuse the decoder.
+ * After any non-CBOR_SUCCESS return produced while operating on a valid
+ * decoder instance, the decoder enters a sticky error state; subsequent calls
+ * return the same error immediately without processing bytes.  API-level
+ * argument validation failures (for example NULL decoder/callback, or NULL
+ * data with len > 0) return CBOR_INVALID but do not modify decoder state.
+ * Call cbor_stream_reset() to clear a sticky error and reuse the decoder.
  *
  * @param[in,out] decoder decoder context initialized by cbor_stream_init()
  * @param[in]     data    pointer to bytes to consume (may be NULL if len == 0)
@@ -180,8 +183,8 @@ void cbor_stream_init(cbor_stream_decoder_t *decoder,
  *
  * @return CBOR_SUCCESS   — all bytes processed, no error
  *         CBOR_ILLEGAL   — malformed encoding (reserved additional-info); sticky
- *         CBOR_INVALID   — well-formed but semantically invalid (e.g. null
- *                          callback, negative integer exceeds int64 range); sticky
+ *         CBOR_INVALID   — semantically invalid item, or invalid API arguments;
+ *                          sticky only for the former
  *         CBOR_EXCESSIVE — nesting depth or tag nesting exceeded limit; sticky
  *         CBOR_ABORTED   — callback returned false; sticky
  */

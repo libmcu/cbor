@@ -293,7 +293,7 @@ if (cbor_stream_feed(&decoder, bad_data, len) != CBOR_SUCCESS) {
 | `CBOR_STREAM_EVENT_TAG` | `data->tag` | emitted before the wrapped item's event(s) |
 | `CBOR_STREAM_EVENT_FLOAT` | `data->flt` | half/single/double all promoted to `double` |
 | `CBOR_STREAM_EVENT_BOOL` | `data->boolean` | |
-| `CBOR_STREAM_EVENT_NULL` / `_UNDEFINED` | NULL | |
+| `CBOR_STREAM_EVENT_NULL` / `_UNDEFINED` | (unused) | callback receives a non-NULL `data` pointer, but no payload field is used |
 | `CBOR_STREAM_EVENT_SIMPLE` | `data->simple` | unassigned simple value |
 
 #### Error codes
@@ -307,9 +307,14 @@ if (cbor_stream_feed(&decoder, bad_data, len) != CBOR_SUCCESS) {
 | `CBOR_EXCESSIVE` | nesting deeper than `CBOR_RECURSION_MAX_LEVEL` or tag nesting beyond `CBOR_STREAM_MAX_PENDING_TAGS` |
 | `CBOR_ABORTED` | callback returned `false` |
 
-After any non-`CBOR_SUCCESS` return the decoder is in a sticky error state.
-Subsequent `feed()` / `finish()` calls return the same error immediately.
-Call `cbor_stream_reset()` to recover.
+After any non-`CBOR_SUCCESS` return produced while operating on a valid decoder
+instance, the decoder is in a sticky error state. Subsequent `feed()` /
+`finish()` calls return the same error immediately until you call
+`cbor_stream_reset()`.
+
+API-level argument validation failures (for example `NULL` decoder/callback, or
+`NULL` data with non-zero length) may also return `CBOR_INVALID`, but they do
+not modify decoder state and therefore are not sticky.
 
 ## Tools
 
