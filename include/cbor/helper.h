@@ -29,7 +29,10 @@ typedef enum {
 	               *   match) */
 	CBOR_KEY_INT, /**< map integer key */
 	CBOR_KEY_IDX, /**< array index (0-based) */
-	CBOR_KEY_ANY, /**< wildcard: matches any key type or index at this depth */
+	CBOR_KEY_ANY, /**< wildcard: matches any map string/integer key or array
+	               *   index at this depth; other map key types (e.g. float,
+	               *   nested array/map keys) are skipped by the dispatcher
+	               *   and will not match. See also CBOR_ANY_SEG(). */
 } cbor_key_type_t;
 
 struct cbor_path_segment {
