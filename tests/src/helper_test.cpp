@@ -690,6 +690,69 @@ TEST(Helper, ShouldDispatchOnce_WhenIndefiniteStringValueUnderStringKey)
 	LONGS_EQUAL(1, count);
 }
 
+TEST(Helper, ShouldNotFireWildcard_WhenExactParserMatchesSameItem)
+{
+	/* {"a": 1} */
+	static const uint8_t msg[] = {
+		0xA1, 0x61, 0x61, 0x01
+	};
+
+	static const struct cbor_path_segment path_exact[] = { CBOR_STR_SEG("a") };
+	static const struct cbor_path_segment path_wild[]  = { CBOR_ANY_SEG() };
+
+	auto exact_cb = [](const cbor_reader_t *, const struct cbor_parser *,
+			   const cbor_item_t *, void *) {
+		mock().actualCall("exact");
+	};
+	auto wild_cb = [](const cbor_reader_t *, const struct cbor_parser *,
+			  const cbor_item_t *, void *) {
+		mock().actualCall("wildcard");
+	};
+	const struct cbor_parser parsers[] = {
+		CBOR_PATH(path_exact, exact_cb),
+		CBOR_PATH(path_wild,  wild_cb),
+	};
+
+	mock().expectOneCall("exact");
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), nullptr));
+}
+
+TEST(Helper, ShouldFireWildcard_WhenNoExactParserMatchesCurrentItem)
+{
+	/* {"a": 1, "b": 2} — exact only for "a"; "b" falls through to wildcard */
+	static const uint8_t msg[] = {
+		0xA2,
+		0x61, 0x61, 0x01,
+		0x61, 0x62, 0x02
+	};
+
+	static const struct cbor_path_segment path_exact[] = { CBOR_STR_SEG("a") };
+	static const struct cbor_path_segment path_wild[]  = { CBOR_ANY_SEG() };
+
+	auto exact_cb = [](const cbor_reader_t *, const struct cbor_parser *,
+			   const cbor_item_t *, void *) {
+		mock().actualCall("exact");
+	};
+	auto wild_cb = [](const cbor_reader_t *, const struct cbor_parser *,
+			  const cbor_item_t *, void *) {
+		mock().actualCall("wildcard");
+	};
+	const struct cbor_parser parsers[] = {
+		CBOR_PATH(path_exact, exact_cb),
+		CBOR_PATH(path_wild,  wild_cb),
+	};
+
+	mock().expectOneCall("exact");
+	mock().expectOneCall("wildcard");
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), nullptr));
+}
+
 TEST(Helper, ShouldDispatch_WhenTaggedValueUnderStringKey)
 {
 	/* {"ts": tag(1, 1000000000)} */

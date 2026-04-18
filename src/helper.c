@@ -62,12 +62,40 @@ struct parser_ctx {
 	struct path_stack *stack;
 };
 
+static bool path_has_wildcard(const struct cbor_parser *p)
+{
+	for (size_t i = 0; i < p->depth; i++) {
+		if (p->path[i].type == CBOR_KEY_ANY) {
+			return true;
+		}
+	}
+	return false;
+}
+
 static void dispatch_item(const cbor_reader_t *reader,
 		const cbor_item_t *item, struct parser_ctx *ctx)
 {
+	/* Prefer exact-path parsers over wildcard parsers.  Run exact matches
+	 * first; fall back to wildcard matches only when no exact match fires. */
+	bool exact_fired = false;
+
 	for (size_t i = 0; i < ctx->nr_parsers; i++) {
 		const struct cbor_parser *p = &ctx->parsers[i];
-		if (p->run && path_matches(ctx->stack, p)) {
+		if (p->run && path_matches(ctx->stack, p) &&
+				!path_has_wildcard(p)) {
+			p->run(reader, p, item, ctx->arg);
+			exact_fired = true;
+		}
+	}
+
+	if (exact_fired) {
+		return;
+	}
+
+	for (size_t i = 0; i < ctx->nr_parsers; i++) {
+		const struct cbor_parser *p = &ctx->parsers[i];
+		if (p->run && path_matches(ctx->stack, p) &&
+				path_has_wildcard(p)) {
 			p->run(reader, p, item, ctx->arg);
 		}
 	}
