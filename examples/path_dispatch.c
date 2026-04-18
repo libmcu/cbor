@@ -48,7 +48,11 @@ static void on_name(const cbor_reader_t *reader,
 {
 	(void)parser;
 	char *buf = (char *)arg;
-	cbor_decode(reader, item, buf, 32 - 1);
+	size_t n = 0;
+	if (cbor_decode(reader, item, buf, 32 - 1) == CBOR_SUCCESS) {
+		n = item->size;
+	}
+	buf[n] = '\0';
 }
 
 static void depth1_example(void)
@@ -94,7 +98,11 @@ static void on_dev_id(const cbor_reader_t *reader,
 {
 	(void)parser;
 	struct endpoints *ep = (struct endpoints *)arg;
-	cbor_decode(reader, item, ep->dev.id, sizeof(ep->dev.id) - 1);
+	size_t n = 0;
+	if (cbor_decode(reader, item, ep->dev.id, sizeof(ep->dev.id) - 1) == CBOR_SUCCESS) {
+		n = item->size;
+	}
+	ep->dev.id[n] = '\0';
 }
 
 static void on_dev_url(const cbor_reader_t *reader,
@@ -103,7 +111,11 @@ static void on_dev_url(const cbor_reader_t *reader,
 {
 	(void)parser;
 	struct endpoints *ep = (struct endpoints *)arg;
-	cbor_decode(reader, item, ep->dev.url, sizeof(ep->dev.url) - 1);
+	size_t n = 0;
+	if (cbor_decode(reader, item, ep->dev.url, sizeof(ep->dev.url) - 1) == CBOR_SUCCESS) {
+		n = item->size;
+	}
+	ep->dev.url[n] = '\0';
 }
 
 static void on_prod_id(const cbor_reader_t *reader,
@@ -112,7 +124,11 @@ static void on_prod_id(const cbor_reader_t *reader,
 {
 	(void)parser;
 	struct endpoints *ep = (struct endpoints *)arg;
-	cbor_decode(reader, item, ep->prod.id, sizeof(ep->prod.id) - 1);
+	size_t n = 0;
+	if (cbor_decode(reader, item, ep->prod.id, sizeof(ep->prod.id) - 1) == CBOR_SUCCESS) {
+		n = item->size;
+	}
+	ep->prod.id[n] = '\0';
 }
 
 static void on_prod_url(const cbor_reader_t *reader,
@@ -121,7 +137,11 @@ static void on_prod_url(const cbor_reader_t *reader,
 {
 	(void)parser;
 	struct endpoints *ep = (struct endpoints *)arg;
-	cbor_decode(reader, item, ep->prod.url, sizeof(ep->prod.url) - 1);
+	size_t n = 0;
+	if (cbor_decode(reader, item, ep->prod.url, sizeof(ep->prod.url) - 1) == CBOR_SUCCESS) {
+		n = item->size;
+	}
+	ep->prod.url[n] = '\0';
 }
 
 static void depth2_example(void)
@@ -184,7 +204,11 @@ static void on_item0_name(const cbor_reader_t *reader,
 {
 	(void)parser;
 	char (*names)[16] = (char (*)[16])arg;
-	cbor_decode(reader, item, names[0], 16 - 1);
+	size_t n = 0;
+	if (cbor_decode(reader, item, names[0], 16 - 1) == CBOR_SUCCESS) {
+		n = item->size;
+	}
+	names[0][n] = '\0';
 }
 
 static void on_item1_name(const cbor_reader_t *reader,
@@ -193,7 +217,11 @@ static void on_item1_name(const cbor_reader_t *reader,
 {
 	(void)parser;
 	char (*names)[16] = (char (*)[16])arg;
-	cbor_decode(reader, item, names[1], 16 - 1);
+	size_t n = 0;
+	if (cbor_decode(reader, item, names[1], 16 - 1) == CBOR_SUCCESS) {
+		n = item->size;
+	}
+	names[1][n] = '\0';
 }
 
 static void depth3_arr_example(void)
@@ -245,7 +273,11 @@ static void on_wifi_ssid(const cbor_reader_t *reader,
 {
 	(void)parser;
 	struct net_cfg *cfg = (struct net_cfg *)arg;
-	cbor_decode(reader, item, cfg->wifi_ssid, sizeof(cfg->wifi_ssid) - 1);
+	size_t n = 0;
+	if (cbor_decode(reader, item, cfg->wifi_ssid, sizeof(cfg->wifi_ssid) - 1) == CBOR_SUCCESS) {
+		n = item->size;
+	}
+	cfg->wifi_ssid[n] = '\0';
 }
 
 static void on_wifi_pass(const cbor_reader_t *reader,
@@ -254,7 +286,11 @@ static void on_wifi_pass(const cbor_reader_t *reader,
 {
 	(void)parser;
 	struct net_cfg *cfg = (struct net_cfg *)arg;
-	cbor_decode(reader, item, cfg->wifi_pass, sizeof(cfg->wifi_pass) - 1);
+	size_t n = 0;
+	if (cbor_decode(reader, item, cfg->wifi_pass, sizeof(cfg->wifi_pass) - 1) == CBOR_SUCCESS) {
+		n = item->size;
+	}
+	cfg->wifi_pass[n] = '\0';
 }
 
 static void on_eth_ip(const cbor_reader_t *reader,
@@ -263,7 +299,11 @@ static void on_eth_ip(const cbor_reader_t *reader,
 {
 	(void)parser;
 	struct net_cfg *cfg = (struct net_cfg *)arg;
-	cbor_decode(reader, item, cfg->eth_ip, sizeof(cfg->eth_ip) - 1);
+	size_t n = 0;
+	if (cbor_decode(reader, item, cfg->eth_ip, sizeof(cfg->eth_ip) - 1) == CBOR_SUCCESS) {
+		n = item->size;
+	}
+	cfg->eth_ip[n] = '\0';
 }
 
 static void depth4_example(void)
