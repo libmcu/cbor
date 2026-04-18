@@ -92,8 +92,10 @@ struct cbor_parser {
 #define CBOR_STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
 #else
 /* C99 fallback: negative-size array trick */
+#define CBOR_CONCAT_INNER(a, b)	a##b
+#define CBOR_CONCAT(a, b)	CBOR_CONCAT_INNER(a, b)
 #define CBOR_STATIC_ASSERT(cond, msg) \
-	typedef char cbor_static_assert_at_line_##__LINE__[(cond) ? 1 : -1]
+	typedef char CBOR_CONCAT(cbor_static_assert_at_line_, __LINE__)[(cond) ? 1 : -1]
 #endif
 
 #define CBOR_PATH_DECL(var, path_arr, fn) \

@@ -11,17 +11,17 @@
 extern "C" {
 #endif
 
-#if !defined(MAKE_VERSION)
-#define MAKE_VERSION(major, minor, patch)	\
+#if !defined(CBOR_MAKE_VERSION)
+#define CBOR_MAKE_VERSION(major, minor, patch)	\
 	(((major) << 16) | ((minor) << 8) | (patch))
 #endif
 
 #define CBOR_VERSION_MAJOR	0
 #define CBOR_VERSION_MINOR	6
 #define CBOR_VERSION_BUILD	0
-#define CBOR_VERSION		MAKE_VERSION(CBOR_VERSION_MAJOR, \
-					CBOR_VERSION_MINOR, \
-					CBOR_VERSION_BUILD)
+#define CBOR_VERSION		CBOR_MAKE_VERSION(CBOR_VERSION_MAJOR, \
+				CBOR_VERSION_MINOR, \
+				CBOR_VERSION_BUILD)
 
 #if defined(__cplusplus)
 }
