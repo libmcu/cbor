@@ -288,6 +288,58 @@ TEST(Helper, ShouldReturnFalse_WhenMalformedMessage)
 					  msg, sizeof(msg), nullptr));
 }
 
+TEST(Helper, ShouldDispatch_WhenWildcardMatchesAnyArrayElement)
+{
+	/* {"items": [10, 20, 30]} */
+	static const uint8_t msg[] = {
+		0xA1, 0x65, 0x69, 0x74, 0x65, 0x6D, 0x73,
+		0x83, 0x0A, 0x14, 0x18, 0x1E
+	};
+
+	static const struct cbor_path_segment path[] = {
+		CBOR_STR_SEG("items"), CBOR_ANY_SEG()
+	};
+	int count = 0;
+	auto counter_cb = [](const cbor_reader_t *, const struct cbor_parser *,
+			     const cbor_item_t *, void *arg) {
+		(*static_cast<int *>(arg))++;
+	};
+	const struct cbor_parser parsers[] = {
+		{ path, sizeof(path)/sizeof(*path), counter_cb },
+	};
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), &count));
+	LONGS_EQUAL(3, count);
+}
+
+TEST(Helper, ShouldDispatch_WhenWildcardMatchesAnyTopLevelMapValue)
+{
+	/* {"a": 1, "b": 2, "c": 3} */
+	static const uint8_t msg[] = {
+		0xA3,
+		0x61, 0x61, 0x01,
+		0x61, 0x62, 0x02,
+		0x61, 0x63, 0x03
+	};
+
+	static const struct cbor_path_segment path[] = { CBOR_ANY_SEG() };
+	int count = 0;
+	auto counter_cb = [](const cbor_reader_t *, const struct cbor_parser *,
+			     const cbor_item_t *, void *arg) {
+		(*static_cast<int *>(arg))++;
+	};
+	const struct cbor_parser parsers[] = {
+		{ path, sizeof(path)/sizeof(*path), counter_cb },
+	};
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), &count));
+	LONGS_EQUAL(3, count);
+}
+
 TEST(Helper, iterate_ShouldKeepSiblingAfterTopLevelIndefiniteContainer)
 {
 	uint8_t msg[] = { 0x9f, 0x01, 0xff, 0x02 };

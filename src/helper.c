@@ -18,6 +18,10 @@ struct path_stack {
 static bool segment_equal(const struct cbor_path_segment *a,
 		const struct cbor_path_segment *b)
 {
+	if (a->type == CBOR_KEY_ANY || b->type == CBOR_KEY_ANY) {
+		return true;
+	}
+
 	if (a->type != b->type) {
 		return false;
 	}
@@ -191,8 +195,7 @@ static struct cbor_path_segment make_map_seg(const cbor_reader_t *reader,
 
 static bool make_seg(const cbor_reader_t *reader,
 		const cbor_item_t *item, const cbor_item_t *parent,
-		size_t pos, size_t array_idx,
-		struct cbor_path_segment *out)
+		size_t pos, struct cbor_path_segment *out)
 {
 	if (parent == NULL) {
 		return false;
@@ -208,20 +211,21 @@ static bool make_seg(const cbor_reader_t *reader,
 
 	if (parent->type == CBOR_ITEM_ARRAY) {
 		out->type = CBOR_KEY_IDX;
-		out->key.idx = (intmax_t)(array_idx + pos);
+		out->key.idx = (intmax_t)pos;
 		return true;
 	}
 
 	return false;
 }
 
-static void push_seg(struct path_stack *stack,
+static bool push_seg(struct path_stack *stack,
 		const struct cbor_path_segment *seg)
 {
-	if (stack->depth < CBOR_RECURSION_MAX_LEVEL) {
-		stack->segments[stack->depth] = *seg;
-		stack->depth++;
+	if (stack->depth >= CBOR_RECURSION_MAX_LEVEL) {
+		return false;
 	}
+	stack->segments[stack->depth++] = *seg;
+	return true;
 }
 
 static void pop_seg(struct path_stack *stack)
@@ -233,32 +237,34 @@ static void pop_seg(struct path_stack *stack)
 
 static size_t dispatch_each(const cbor_reader_t *reader,
 		const cbor_item_t *items, size_t nr_items, size_t max_nodes,
-		const cbor_item_t *parent, size_t array_idx,
-		struct parser_ctx *ctx);
+		const cbor_item_t *parent, struct parser_ctx *ctx);
 
 static size_t dispatch_value(const cbor_reader_t *reader,
 		const cbor_item_t *item, size_t remaining_nodes,
 		iter_action_t action, size_t len,
-		const cbor_item_t *parent, size_t pos, size_t array_idx,
+		const cbor_item_t *parent, size_t pos,
 		struct parser_ctx *ctx)
 {
 	struct cbor_path_segment seg;
-	bool has_seg = make_seg(reader, item, parent, pos, array_idx, &seg);
+	bool seg_pushed = false;
 
-	if (has_seg) {
-		push_seg(ctx->stack, &seg);
+	if (make_seg(reader, item, parent, pos, &seg)) {
+		if (!push_seg(ctx->stack, &seg)) {
+			return 0;
+		}
+		seg_pushed = true;
 	}
 
 	size_t consumed = 0;
 
 	if (action == ITER_RECURSE || action == ITER_RECURSE_CALLBACK_FIRST) {
 		consumed = dispatch_each(reader, item + 1, len,
-				remaining_nodes, item, 0, ctx);
+				remaining_nodes, item, ctx);
 	} else if (action == ITER_LEAF) {
 		dispatch_item(reader, item, ctx);
 	}
 
-	if (has_seg) {
+	if (seg_pushed) {
 		pop_seg(ctx->stack);
 	}
 
@@ -267,8 +273,7 @@ static size_t dispatch_value(const cbor_reader_t *reader,
 
 static size_t dispatch_each(const cbor_reader_t *reader,
 		const cbor_item_t *items, size_t nr_items, size_t max_nodes,
-		const cbor_item_t *parent, size_t array_idx,
-		struct parser_ctx *ctx)
+		const cbor_item_t *parent, struct parser_ctx *ctx)
 {
 	size_t extra = 0;
 	size_t i = 0;
@@ -302,18 +307,20 @@ static size_t dispatch_each(const cbor_reader_t *reader,
 			return i + extra;
 		}
 
+		/* MAP key position: recurse into container keys but do not
+		 * dispatch — container-typed MAP keys are not path-tracked. */
 		if (parent != NULL && parent->type == CBOR_ITEM_MAP &&
 				(i % 2) == 0) {
 			if (action == ITER_RECURSE ||
 					action == ITER_RECURSE_CALLBACK_FIRST) {
 				extra += dispatch_each(reader, item + 1, len,
-						remaining_nodes, item, 0, ctx);
+						remaining_nodes, item, ctx);
 			}
 			continue;
 		}
 
 		extra += dispatch_value(reader, item, remaining_nodes,
-				action, len, parent, i, array_idx, ctx);
+				action, len, parent, i, ctx);
 	}
 
 	return i + extra;
@@ -352,7 +359,7 @@ bool cbor_unmarshal(cbor_reader_t *reader, const struct cbor_parser *parsers,
 		.stack      = &stack,
 	};
 
-	dispatch_each(reader, reader->items, n, n, NULL, 0, &ctx);
+	dispatch_each(reader, reader->items, n, n, NULL, &ctx);
 
 	return true;
 }

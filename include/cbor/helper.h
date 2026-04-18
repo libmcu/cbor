@@ -17,11 +17,16 @@ extern "C" {
 
 /**
  * Key type for a path segment.
+ *
+ * CBOR_KEY_INT and CBOR_KEY_IDX are intentionally distinct types:
+ * CBOR_INT_SEG matches integer map keys; CBOR_IDX_SEG matches array positions.
+ * They do not match each other even when the numeric value is equal.
  */
 typedef enum {
 	CBOR_KEY_STR, /**< map string key: byte-compared against encoded text */
 	CBOR_KEY_INT, /**< map integer key */
 	CBOR_KEY_IDX, /**< array index (0-based) */
+	CBOR_KEY_ANY, /**< wildcard: matches any key type or index at this depth */
 } cbor_key_type_t;
 
 typedef union {
@@ -45,17 +50,24 @@ struct cbor_parser {
 			const cbor_item_t *item, void *arg);
 };
 
+/** Matches a map string key (literal string). */
 #define CBOR_STR_SEG(s) \
 	{ CBOR_KEY_STR, { .str = { (s), sizeof(s) - 1 } } }
+/** Matches a map integer key. */
 #define CBOR_INT_SEG(n)		{ CBOR_KEY_INT, { .idx = (intmax_t)(n) } }
+/** Matches an array element at a specific 0-based index. */
 #define CBOR_IDX_SEG(n)		{ CBOR_KEY_IDX, { .idx = (intmax_t)(n) } }
+/** Wildcard: matches any map key (string or integer) or any array index. */
+#define CBOR_ANY_SEG()		{ CBOR_KEY_ANY, { .idx = 0 } }
 
 /*
- * CBOR_PATH(path_arr, fn) - fill a cbor_parser from a named path array.
+ * CBOR_PATH(path_arr, fn) - declare a cbor_parser from a named path array.
  *
- * path_arr MUST be a named array, not a pointer.  sizeof is used to compute
- * the element count at compile time so that depth cannot fall out of sync
- * with the actual array length.
+ * path_arr MUST be a named array variable, not a pointer.  sizeof() computes
+ * the element count at compile time so depth stays in sync automatically.
+ *
+ * Maximum matchable depth is CBOR_RECURSION_MAX_LEVEL (default 8).
+ * Paths longer than this limit are silently unmatched.
  */
 #define CBOR_PATH(path_arr, fn) \
 	{ .path  = (path_arr), \
