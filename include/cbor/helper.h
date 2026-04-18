@@ -23,7 +23,10 @@ extern "C" {
  * They do not match each other even when the numeric value is equal.
  */
 typedef enum {
-	CBOR_KEY_STR, /**< map string key: byte-compared against encoded text */
+	CBOR_KEY_STR, /**< map string key: byte-compared against CBOR string
+	               *   keys (both text and byte strings share the same
+	               *   internal representation, so byte-string keys also
+	               *   match) */
 	CBOR_KEY_INT, /**< map integer key */
 	CBOR_KEY_IDX, /**< array index (0-based) */
 	CBOR_KEY_ANY, /**< wildcard: matches any key type or index at this depth */
@@ -57,8 +60,10 @@ struct cbor_parser {
 #define CBOR_INT_SEG(n)		{ CBOR_KEY_INT, { .idx = (intmax_t)(n) } }
 /** Matches an array element at a specific 0-based index. */
 #define CBOR_IDX_SEG(n)		{ CBOR_KEY_IDX, { .idx = (intmax_t)(n) } }
-/** Wildcard: matches any map value (regardless of its key type or value) or
- * any array element at this depth. Does NOT match map keys themselves. */
+/** Wildcard: matches any map value whose key is a string or integer, or any
+ * array element at this depth. Map values under other key types (e.g. float,
+ * array keys) are skipped by the dispatcher and will not match. Does NOT
+ * match map keys themselves. */
 #define CBOR_ANY_SEG()		{ CBOR_KEY_ANY, { 0 } }
 
 /*

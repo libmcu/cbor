@@ -150,17 +150,35 @@ TEST(Helper, ShouldDispatchCorrectly_WhenSameKeyUnderDifferentParents)
 	static const struct cbor_path_segment path_prod_url[]  = {
 		CBOR_STR_SEG("prod"), CBOR_STR_SEG("url")
 	};
-	static const struct cbor_parser parsers[] = {
-		CBOR_PATH(path_dev_baid,  on_item),
-		CBOR_PATH(path_dev_url,   on_item),
-		CBOR_PATH(path_prod_baid, on_item),
-		CBOR_PATH(path_prod_url,  on_item),
+
+	auto on_dev_baid = [](const cbor_reader_t *, const struct cbor_parser *,
+			      const cbor_item_t *, void *) {
+		mock().actualCall("dev/ba_id");
+	};
+	auto on_dev_url = [](const cbor_reader_t *, const struct cbor_parser *,
+			     const cbor_item_t *, void *) {
+		mock().actualCall("dev/url");
+	};
+	auto on_prod_baid = [](const cbor_reader_t *, const struct cbor_parser *,
+			       const cbor_item_t *, void *) {
+		mock().actualCall("prod/ba_id");
+	};
+	auto on_prod_url = [](const cbor_reader_t *, const struct cbor_parser *,
+			      const cbor_item_t *, void *) {
+		mock().actualCall("prod/url");
 	};
 
-	mock().expectOneCall("ba_id");
-	mock().expectOneCall("url");
-	mock().expectOneCall("ba_id");
-	mock().expectOneCall("url");
+	const struct cbor_parser parsers[] = {
+		CBOR_PATH(path_dev_baid,  on_dev_baid),
+		CBOR_PATH(path_dev_url,   on_dev_url),
+		CBOR_PATH(path_prod_baid, on_prod_baid),
+		CBOR_PATH(path_prod_url,  on_prod_url),
+	};
+
+	mock().expectOneCall("dev/ba_id");
+	mock().expectOneCall("dev/url");
+	mock().expectOneCall("prod/ba_id");
+	mock().expectOneCall("prod/url");
 
 	LONGS_EQUAL(true, cbor_unmarshal(&reader,
 					 parsers, sizeof(parsers) / sizeof(*parsers),
