@@ -639,6 +639,39 @@ TEST(Helper, ShouldNotDispatchInsideContainerKey)
 	LONGS_EQUAL(1, count);
 }
 
+TEST(Helper, ShouldDispatchOnce_WhenIndefiniteStringValueUnderStringKey)
+{
+	/*
+	 * {_ "ts": (_ "hel", "lo")}
+	 * The parser registers for "ts". The callback must fire exactly once
+	 * for the indefinite-string item itself, not once per chunk.
+	 */
+	static const uint8_t msg[] = {
+		0xBF,                           /* map(*) */
+		0x62, 0x74, 0x73,               /* "ts" */
+		0x7F,                           /* tstr(*) */
+		0x63, 0x68, 0x65, 0x6C,         /* "hel" */
+		0x62, 0x6C, 0x6F,               /* "lo" */
+		0xFF,                           /* break (end string) */
+		0xFF                            /* break (end map) */
+	};
+
+	int count = 0;
+	auto counter_cb = [](const cbor_reader_t *, const struct cbor_parser *,
+			     const cbor_item_t *, void *arg) {
+		(*static_cast<int *>(arg))++;
+	};
+	static const struct cbor_path_segment path[] = { CBOR_STR_SEG("ts") };
+	const struct cbor_parser parsers[] = {
+		CBOR_PATH(path, counter_cb),
+	};
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), &count));
+	LONGS_EQUAL(1, count);
+}
+
 TEST(Helper, ShouldDispatch_WhenTaggedValueUnderStringKey)
 {
 	/* {"ts": tag(1, 1000000000)} */

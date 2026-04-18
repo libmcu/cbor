@@ -287,7 +287,10 @@ static size_t dispatch_value(const cbor_reader_t *reader,
 
 	size_t consumed = 0;
 
-	if (action == ITER_RECURSE || action == ITER_RECURSE_CALLBACK_FIRST) {
+	if (action == ITER_RECURSE_CALLBACK_FIRST) {
+		dispatch_item(reader, item, ctx);
+		consumed = skip_subtree(item + 1, len, remaining_nodes);
+	} else if (action == ITER_RECURSE) {
 		consumed = dispatch_each(reader, item + 1, len,
 				remaining_nodes, item, ctx);
 	} else if (action == ITER_LEAF) {
