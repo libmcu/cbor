@@ -131,7 +131,7 @@ TEST(Helper, ShouldDispatch_WhenDepth0ParserMatchesScalarRoot)
 				     const cbor_item_t *, void *arg) {
 		(*static_cast<int *>(arg))++;
 	};
-	static const struct cbor_parser parsers[] = {
+	const struct cbor_parser parsers[] = {
 		{ NULL, 0, counter_cb },
 	};
 

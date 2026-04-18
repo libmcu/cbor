@@ -202,12 +202,12 @@ static bool make_map_seg(const cbor_reader_t *reader,
 		const cbor_item_t *key, struct cbor_path_segment *seg)
 {
 	if (key->type == CBOR_ITEM_INTEGER) {
-		intmax_t v = 0;
+		intptr_t v = 0;
 		if (cbor_decode(reader, key, &v, sizeof(v)) != CBOR_SUCCESS) {
 			return false;
 		}
 		seg->type = CBOR_KEY_INT;
-		seg->val = (intptr_t)v;
+		seg->val = v;
 		seg->len = 0;
 	} else if (key->type == CBOR_ITEM_STRING) {
 		const void *p = cbor_decode_pointer(reader, key);
