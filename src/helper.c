@@ -348,7 +348,7 @@ static size_t dispatch_each(const cbor_reader_t *reader,
 
 		const cbor_item_t *item = &items[i + extra];
 		size_t remaining_nodes = max_nodes - (i + extra + 1);
-		size_t len;
+		size_t len = 0;
 		iter_action_t action =
 			get_iter_action(item, remaining_nodes, &len);
 

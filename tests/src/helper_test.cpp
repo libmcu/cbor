@@ -122,6 +122,25 @@ TEST(Helper, ShouldDispatch_WhenDepth1IntegerKey)
 					 msg, sizeof(msg), nullptr));
 }
 
+TEST(Helper, ShouldDispatch_WhenDepth0ParserMatchesScalarRoot)
+{
+	static const uint8_t msg[] = { 0x18, 0x2A };
+
+	int count = 0;
+	auto counter_cb = [](const cbor_reader_t *, const struct cbor_parser *,
+				     const cbor_item_t *, void *arg) {
+		(*static_cast<int *>(arg))++;
+	};
+	static const struct cbor_parser parsers[] = {
+		{ NULL, 0, counter_cb },
+	};
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), &count));
+	LONGS_EQUAL(1, count);
+}
+
 TEST(Helper, ShouldDispatchCorrectly_WhenSameKeyUnderDifferentParents)
 {
 	/*
