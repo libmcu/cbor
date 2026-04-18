@@ -271,9 +271,8 @@ static size_t dispatch_value(const cbor_reader_t *reader,
 
 		if (seg_valid) {
 			if (!push_seg(ctx->stack, &seg)) {
-				return skip_subtree(item,
-						(action == ITER_LEAF) ? 0 : len + 1,
-						remaining_nodes + 1);
+				return (action == ITER_LEAF) ? 0 :
+					skip_subtree(item + 1, len, remaining_nodes);
 			}
 			seg_pushed = true;
 		}
@@ -338,10 +337,8 @@ static size_t dispatch_each(const cbor_reader_t *reader,
 
 			if (is_key) {
 				last_key_item = item;
-				if (action == ITER_RECURSE ||
-						action == ITER_RECURSE_CALLBACK_FIRST) {
-					extra += skip_subtree(item + 1, len,
-							remaining_nodes);
+				if (action == ITER_RECURSE || action == ITER_RECURSE_CALLBACK_FIRST) {
+					extra += skip_subtree(item + 1, len, remaining_nodes);
 					last_key_item = NULL;
 				}
 				continue;

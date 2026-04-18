@@ -56,8 +56,9 @@ static void parse_ssid(const cbor_reader_t *reader,
 {
 	(void)parser;
 	struct aws_request *p = (struct aws_request *)arg;
-	cbor_decode(reader, item, p->ssid, sizeof(p->ssid));
-	p->ssid_len = (uint8_t)item->size;
+	if (cbor_decode(reader, item, p->ssid, sizeof(p->ssid)) == CBOR_SUCCESS) {
+		p->ssid_len = (uint8_t)item->size;
+	}
 }
 
 static void parse_passwd(const cbor_reader_t *reader,
@@ -66,8 +67,9 @@ static void parse_passwd(const cbor_reader_t *reader,
 {
 	(void)parser;
 	struct aws_request *p = (struct aws_request *)arg;
-	cbor_decode(reader, item, p->passwd, sizeof(p->passwd));
-	p->passwd_len = (uint8_t)item->size;
+	if (cbor_decode(reader, item, p->passwd, sizeof(p->passwd)) == CBOR_SUCCESS) {
+		p->passwd_len = (uint8_t)item->size;
+	}
 }
 
 static const struct cbor_path_segment path_w[] = { CBOR_STR_SEG("w") };

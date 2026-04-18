@@ -83,8 +83,12 @@ struct cbor_parser {
  */
 #if defined(__cplusplus)
 #define CBOR_STATIC_ASSERT(cond, msg) static_assert(cond, msg)
-#else
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #define CBOR_STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
+#else
+/* C99 fallback: negative-size array trick */
+#define CBOR_STATIC_ASSERT(cond, msg) \
+	typedef char cbor_static_assert_at_line_##__LINE__[(cond) ? 1 : -1]
 #endif
 
 #define CBOR_PATH_DECL(var, path_arr, fn) \
