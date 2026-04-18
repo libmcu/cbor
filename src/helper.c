@@ -10,90 +10,112 @@
 
 #include <string.h>
 
+struct path_stack {
+	struct cbor_path_segment segments[CBOR_RECURSION_MAX_LEVEL];
+	size_t depth;
+};
+
+static bool segment_equal(const struct cbor_path_segment *pattern,
+		const struct cbor_path_segment *data)
+{
+	/* Only path (pattern) segments can be wildcards; runtime data segments never are. */
+	if (pattern->type == CBOR_KEY_ANY) {
+		return true;
+	}
+
+	if (pattern->type != data->type) {
+		return false;
+	}
+
+	switch (pattern->type) {
+	case CBOR_KEY_STR:
+		return pattern->len == data->len &&
+			memcmp((const void *)pattern->val,
+				(const void *)data->val, pattern->len) == 0;
+	case CBOR_KEY_INT:
+	case CBOR_KEY_IDX:
+		return pattern->val == data->val;
+	case CBOR_KEY_ANY: /* fall through */
+	default:
+		return false;
+	}
+}
+
+static bool path_matches(const struct path_stack *stack,
+		const struct cbor_parser *p)
+{
+	if (stack->depth != p->depth) {
+		return false;
+	}
+	for (size_t i = 0; i < p->depth; i++) {
+		if (!segment_equal(&p->path[i], &stack->segments[i])) {
+			return false;
+		}
+	}
+	return true;
+}
+
 struct parser_ctx {
 	const struct cbor_parser *parsers;
 	size_t nr_parsers;
 	void *arg;
+	struct path_stack *stack;
 };
 
-static const struct cbor_parser *get_parser(const struct parser_ctx *ctx,
-		intptr_t intkey, const void *strkey, size_t strkey_len)
+static bool path_has_wildcard(const struct cbor_parser *p)
 {
-	for (size_t i = 0; i < ctx->nr_parsers; i++) {
-		const struct cbor_parser *p = &ctx->parsers[i];
-
-		if (!p->key) {
-			continue;
-		}
-
-		if (strkey && strkey_len && p->keylen >= strkey_len) {
-			if (memcmp(p->key, strkey, strkey_len) == 0) {
-				return p;
-			}
-		} else if (intkey == (intptr_t)p->key) {
-			return p;
+	for (size_t i = 0; i < p->depth; i++) {
+		if (p->path[i].type == CBOR_KEY_ANY) {
+			return true;
 		}
 	}
-
-	return NULL;
+	return false;
 }
 
-/* Internal callback type used by iterate_each().
- * logical_idx is the 0-based position of this item among its logical siblings
- * (TAG items do not increment the index). */
-typedef void (*iter_cb_t)(const cbor_reader_t *reader,
-		const cbor_item_t *item, const cbor_item_t *parent,
-		size_t logical_idx, void *arg);
-
-static void parse_item(const cbor_reader_t *reader, const cbor_item_t *item,
-		const cbor_item_t *parent, size_t logical_idx, void *arg)
+static void dispatch_item(const cbor_reader_t *reader,
+		const cbor_item_t *item, struct parser_ctx *ctx)
 {
-	struct parser_ctx *ctx = (struct parser_ctx *)arg;
-	const void *strkey = NULL;
-	size_t strkey_len = 0;
-	intptr_t intkey = -1;
+	/* Single pass: run exact matches immediately; collect wildcard matches
+	 * for deferred execution only if no exact match fires.
+	 * All exact-match parsers whose paths match are invoked in registration
+	 * order. Registering multiple parsers for the same path is intentional
+	 * and supported (e.g. one parser processes the value, another logs it).
+	 * At most CBOR_MAX_WILDCARD_PARSERS (default 8) wildcard parsers are
+	 * collected per dispatch; additional matches beyond that limit are
+	 * silently dropped in registration order. Raise CBOR_MAX_WILDCARD_PARSERS
+	 * at build time if more wildcard parsers are needed. */
+	const struct cbor_parser *wc[CBOR_MAX_WILDCARD_PARSERS];
+	size_t nr_wc = 0;
+	bool exact_fired = false;
 
-	/* TAG items themselves carry no value; the wrapped item is dispatched */
-	if (item->type == CBOR_ITEM_TAG) {
-		return;
-	}
-
-	if (parent && parent->type == CBOR_ITEM_MAP) {
-		/* logical_idx is 0-based: even = key, odd = value */
-		if (logical_idx % 2 == 0) {
-			return;
+	for (size_t i = 0; i < ctx->nr_parsers; i++) {
+		const struct cbor_parser *p = &ctx->parsers[i];
+		if (!p->run || !path_matches(ctx->stack, p)) {
+			continue;
 		}
-
-		/* Walk backward past any TAG items to reach the actual key */
-		const cbor_item_t *key = item - 1;
-		while (key > parent && key->type == CBOR_ITEM_TAG) {
-			key--;
-		}
-
-		if (key->type == CBOR_ITEM_INTEGER) {
-			cbor_decode(reader, key, &intkey, sizeof(intkey));
+		if (path_has_wildcard(p)) {
+			if (nr_wc < CBOR_MAX_WILDCARD_PARSERS) {
+				wc[nr_wc++] = p;
+			}
 		} else {
-			strkey = cbor_decode_pointer(reader, key);
-			strkey_len = key->size;
+			p->run(reader, p, item, ctx->arg);
+			exact_fired = true;
 		}
 	}
 
-	if (strkey || intkey != -1) {
-		const struct cbor_parser *parser =
-			get_parser(ctx, intkey, strkey, strkey_len);
-
-		if (parser && parser->run) {
-			parser->run(reader, parser, item, ctx->arg);
+	if (!exact_fired) {
+		for (size_t i = 0; i < nr_wc; i++) {
+			wc[i]->run(reader, wc[i], item, ctx->arg);
 		}
 	}
 }
 
 typedef enum {
-	ITER_LEAF,                   /* not a container; decode and callback */
-	ITER_RECURSE,                /* container; recurse into children */
-	ITER_RECURSE_CALLBACK_FIRST, /* indefinite string; callback then recurse */
-	ITER_STOP,                   /* MAP size overflow; abort iteration */
-	ITER_TAG,                    /* tag prefix; callback then advance extra */
+	ITER_LEAF,
+	ITER_RECURSE,
+	ITER_RECURSE_CALLBACK_FIRST,
+	ITER_STOP,
+	ITER_TAG,
 } iter_action_t;
 
 static iter_action_t get_iter_action(const cbor_item_t *item,
@@ -122,7 +144,6 @@ static iter_action_t get_iter_action(const cbor_item_t *item,
 		if (item->size > SIZE_MAX / 2) {
 			return ITER_STOP;
 		}
-
 		*len = item->size * 2;
 		return ITER_RECURSE;
 	}
@@ -131,11 +152,14 @@ static iter_action_t get_iter_action(const cbor_item_t *item,
 	return ITER_RECURSE;
 }
 
+typedef void (*iter_cb_t)(const cbor_reader_t *reader,
+		const cbor_item_t *item, const cbor_item_t *parent,
+		size_t logical_idx, void *arg);
+
 static size_t iterate_each(const cbor_reader_t *reader,
 		const cbor_item_t *items, size_t nr_items, size_t max_nodes,
 		const cbor_item_t *parent,
-		iter_cb_t callback_each,
-		void *arg)
+		iter_cb_t callback_each, void *arg)
 {
 	size_t extra = 0;
 	size_t i = 0;
@@ -160,13 +184,9 @@ static size_t iterate_each(const cbor_reader_t *reader,
 		case ITER_STOP:
 			return i + extra;
 		case ITER_TAG:
-			/* TAG is transparent: visible to caller but does not
-			 * consume a logical iteration slot. Advance the physical
-			 * extra counter and re-process the same logical index so
-			 * the wrapped item is seen under the original parent. */
 			(*callback_each)(reader, item, parent, i, arg);
 			extra++;
-			i--;	/* neutralised by the for-loop's i++ */
+			i--;
 			continue;
 		case ITER_LEAF:
 		default:
@@ -174,7 +194,6 @@ static size_t iterate_each(const cbor_reader_t *reader,
 		}
 
 		if (cbor_item_is_break(item)) {
-			/* account for the BREAK token in the consumed count */
 			if (parent && parent->size == (size_t)
 					CBOR_INDEFINITE_VALUE) {
 				i++;
@@ -188,8 +207,207 @@ static size_t iterate_each(const cbor_reader_t *reader,
 	return i + extra;
 }
 
-/* Trampoline: adapts the public cbor_iterate() callback (no logical_idx) to
- * the internal iter_cb_t signature so callers are not affected. */
+static bool make_map_seg(const cbor_reader_t *reader,
+		const cbor_item_t *key, struct cbor_path_segment *seg)
+{
+	if (key->type == CBOR_ITEM_INTEGER) {
+		intptr_t v = 0;
+		if (cbor_decode(reader, key, &v, sizeof(v)) != CBOR_SUCCESS) {
+			return false;
+		}
+		seg->type = CBOR_KEY_INT;
+		seg->val = v;
+		seg->len = 0;
+	} else if (key->type == CBOR_ITEM_STRING) {
+		const void *p = cbor_decode_pointer(reader, key);
+		seg->type = CBOR_KEY_STR;
+		seg->val = (intptr_t)(uintptr_t)p;
+		seg->len = key->size;
+	} else {
+		return false;
+	}
+
+	return true;
+}
+
+static bool push_seg(struct path_stack *stack,
+		const struct cbor_path_segment *seg)
+{
+	if (stack->depth >= CBOR_RECURSION_MAX_LEVEL) {
+		return false;
+	}
+	stack->segments[stack->depth++] = *seg;
+	return true;
+}
+
+static void pop_seg(struct path_stack *stack)
+{
+	if (stack->depth > 0) {
+		stack->depth--;
+	}
+}
+
+static size_t skip_subtree(const cbor_item_t *items, size_t nr_items,
+		size_t max_nodes)
+{
+	size_t extra = 0;
+	size_t i = 0;
+
+	for (i = 0; i < nr_items; i++) {
+		if ((i + extra) >= max_nodes) {
+			break;
+		}
+		const cbor_item_t *item = &items[i + extra];
+		size_t remaining = max_nodes - (i + extra + 1);
+		size_t len = 0;
+		iter_action_t action = get_iter_action(item, remaining, &len);
+
+		if (action == ITER_TAG) {
+			extra++;
+			i--;
+			continue;
+		}
+
+		if (cbor_item_is_break(item)) {
+			i++;
+			break;
+		}
+
+		if (action == ITER_STOP) {
+			return i + extra;
+		}
+
+		if (action == ITER_RECURSE || action == ITER_RECURSE_CALLBACK_FIRST) {
+			extra += skip_subtree(item + 1, len, remaining);
+		}
+	}
+
+	return i + extra;
+}
+
+static size_t dispatch_each(const cbor_reader_t *reader,
+		const cbor_item_t *items, size_t nr_items, size_t max_nodes,
+		const cbor_item_t *parent, struct parser_ctx *ctx);
+
+static size_t dispatch_value(const cbor_reader_t *reader,
+		const cbor_item_t *item, size_t remaining_nodes,
+		iter_action_t action, size_t len,
+		const cbor_item_t *key_item,
+		const cbor_item_t *parent, size_t array_idx,
+		struct parser_ctx *ctx)
+{
+	struct cbor_path_segment seg;
+	bool seg_pushed = false;
+
+	if (parent != NULL) {
+		bool seg_valid = false;
+
+		if (parent->type == CBOR_ITEM_MAP && key_item != NULL) {
+			seg_valid = make_map_seg(reader, key_item, &seg);
+		} else if (parent->type == CBOR_ITEM_ARRAY) {
+			seg.type = CBOR_KEY_IDX;
+			seg.val = (intptr_t)array_idx;
+			seg.len = 0;
+			seg_valid = true;
+		}
+
+		if (parent->type == CBOR_ITEM_MAP && !seg_valid) {
+			return (action == ITER_LEAF) ? 0 :
+				skip_subtree(item + 1, len, remaining_nodes);
+		}
+
+		if (seg_valid) {
+			if (!push_seg(ctx->stack, &seg)) {
+				return (action == ITER_LEAF) ? 0 :
+					skip_subtree(item + 1, len, remaining_nodes);
+			}
+			seg_pushed = true;
+		}
+	}
+
+	size_t consumed = 0;
+
+	if (action == ITER_RECURSE_CALLBACK_FIRST) {
+		dispatch_item(reader, item, ctx);
+		consumed = skip_subtree(item + 1, len, remaining_nodes);
+	} else if (action == ITER_RECURSE) {
+		consumed = dispatch_each(reader, item + 1, len,
+				remaining_nodes, item, ctx);
+	} else if (action == ITER_LEAF) {
+		dispatch_item(reader, item, ctx);
+	}
+
+	if (seg_pushed) {
+		pop_seg(ctx->stack);
+	}
+
+	return consumed;
+}
+
+static size_t dispatch_each(const cbor_reader_t *reader,
+		const cbor_item_t *items, size_t nr_items, size_t max_nodes,
+		const cbor_item_t *parent, struct parser_ctx *ctx)
+{
+	size_t extra = 0;
+	size_t i = 0;
+	size_t array_idx = 0;
+	const cbor_item_t *last_key_item = NULL;
+
+	for (i = 0; i < nr_items; i++) {
+		if ((i + extra) >= max_nodes) {
+			break;
+		}
+
+		const cbor_item_t *item = &items[i + extra];
+		size_t remaining_nodes = max_nodes - (i + extra + 1);
+		size_t len = 0;
+		iter_action_t action =
+			get_iter_action(item, remaining_nodes, &len);
+
+		if (action == ITER_TAG) {
+			extra++;
+			i--;
+			continue;
+		}
+
+		if (cbor_item_is_break(item)) {
+			if (parent && parent->size == (size_t)
+					CBOR_INDEFINITE_VALUE) {
+				i++;
+			}
+			break;
+		}
+
+		if (action == ITER_STOP) {
+			return i + extra;
+		}
+
+		if (parent != NULL && parent->type == CBOR_ITEM_MAP) {
+			bool is_key = ((i % 2) == 0);
+
+			if (is_key) {
+				last_key_item = item;
+				if (action == ITER_RECURSE || action == ITER_RECURSE_CALLBACK_FIRST) {
+					extra += skip_subtree(item + 1, len, remaining_nodes);
+					last_key_item = NULL;
+				}
+				continue;
+			}
+
+			extra += dispatch_value(reader, item, remaining_nodes,
+					action, len, last_key_item, parent, 0, ctx);
+			last_key_item = NULL;
+			continue;
+		}
+
+		extra += dispatch_value(reader, item, remaining_nodes,
+				action, len, NULL, parent, array_idx, ctx);
+		array_idx++;
+	}
+
+	return i + extra;
+}
+
 struct iterate_wrap {
 	void (*cb)(const cbor_reader_t *, const cbor_item_t *,
 		   const cbor_item_t *, void *);
@@ -215,13 +433,28 @@ bool cbor_unmarshal(cbor_reader_t *reader, const struct cbor_parser *parsers,
 		return false;
 	}
 
+	if (parsers == NULL && nr_parsers > 0) {
+		return false;
+	}
+
+	for (size_t i = 0; i < nr_parsers; i++) {
+		if (parsers[i].depth > CBOR_RECURSION_MAX_LEVEL) {
+			return false;
+		}
+		if (parsers[i].depth > 0 && parsers[i].path == NULL) {
+			return false;
+		}
+	}
+
+	struct path_stack stack = { .depth = 0 };
 	struct parser_ctx ctx = {
-		.parsers = parsers,
+		.parsers    = parsers,
 		.nr_parsers = nr_parsers,
-		.arg = arg,
+		.arg        = arg,
+		.stack      = &stack,
 	};
 
-	iterate_each(reader, reader->items, n, n, 0, parse_item, &ctx);
+	dispatch_each(reader, reader->items, n, n, NULL, &ctx);
 
 	return true;
 }
@@ -254,7 +487,7 @@ const char *cbor_stringify_error(cbor_error_t err)
 		return "need more data";
 	case CBOR_ABORTED:
 		return "aborted";
-	case CBOR_ILLEGAL: /* fall through */
+	case CBOR_ILLEGAL:
 	default:
 		return "not well-formed";
 	}
@@ -277,7 +510,7 @@ const char *cbor_stringify_item(cbor_item_t *item)
 		return "simple value";
 	case CBOR_ITEM_TAG:
 		return "tag";
-	case CBOR_ITEM_UNKNOWN: /* fall through */
+	case CBOR_ITEM_UNKNOWN:
 	default:
 		return "unknown";
 	}

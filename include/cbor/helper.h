@@ -13,14 +13,96 @@ extern "C" {
 
 #include "cbor/base.h"
 #include <stdbool.h>
+#include <stdint.h>
+
+#if !defined(CBOR_MAX_WILDCARD_PARSERS)
+#define CBOR_MAX_WILDCARD_PARSERS	8
+#endif
+#if CBOR_MAX_WILDCARD_PARSERS < 1
+#error "CBOR_MAX_WILDCARD_PARSERS must be >= 1"
+#endif
+
+/**
+ * Key type for a path segment.
+ *
+ * CBOR_KEY_INT and CBOR_KEY_IDX are intentionally distinct types:
+ * CBOR_INT_SEG matches integer map keys; CBOR_IDX_SEG matches array positions.
+ * They do not match each other even when the numeric value is equal.
+ */
+typedef enum {
+	CBOR_KEY_STR, /**< map string key: byte-compared against CBOR string
+	               *   keys (both text and byte strings share the same
+	               *   internal representation, so byte-string keys also
+	               *   match) */
+	CBOR_KEY_INT, /**< map integer key */
+	CBOR_KEY_IDX, /**< array index (0-based) */
+	CBOR_KEY_ANY, /**< wildcard: matches any map string/integer key or array
+	               *   index at this depth; other map key types (e.g. float,
+	               *   nested array/map keys) are skipped by the dispatcher
+	               *   and will not match. See also CBOR_ANY_SEG(). */
+} cbor_key_type_t;
+
+struct cbor_path_segment {
+	cbor_key_type_t type;
+	intptr_t        val; /* STR: (intptr_t)ptr; INT/IDX: signed index */
+	size_t          len; /* STR: byte length; otherwise 0 */
+};
 
 struct cbor_parser {
-	const void *key;
-	size_t keylen;
+	const struct cbor_path_segment *path;
+	size_t depth;
 	void (*run)(const cbor_reader_t *reader,
 			const struct cbor_parser *parser,
 			const cbor_item_t *item, void *arg);
 };
+
+/** Matches a map string key (literal string). */
+#define CBOR_STR_SEG(s) \
+	{ CBOR_KEY_STR, (intptr_t)(const void *)(s), sizeof(s) - 1 }
+/** Matches a map integer key. */
+#define CBOR_INT_SEG(n)		{ CBOR_KEY_INT, (intptr_t)(n), 0 }
+/** Matches an array element at a specific 0-based index. */
+#define CBOR_IDX_SEG(n)		{ CBOR_KEY_IDX, (intptr_t)(n), 0 }
+/** Wildcard: matches any map value whose key is a string or integer, or any
+ * array element at this depth. Map values under other key types (e.g. float,
+ * array keys) are skipped by the dispatcher and will not match. Does NOT
+ * match map keys themselves. */
+#define CBOR_ANY_SEG()		{ CBOR_KEY_ANY, 0, 0 }
+
+/* CBOR_PATH(path_arr, fn) - declare a cbor_parser from a named path array.
+ *
+ * path_arr MUST be a named array variable, not a pointer.  sizeof() computes
+ * the element count at compile time so depth stays in sync automatically.
+ *
+ * Maximum matchable depth is CBOR_RECURSION_MAX_LEVEL (default 8).
+ * Use CBOR_PATH_DECL to catch depth violations at compile time. */
+#define CBOR_PATH(path_arr, fn) \
+	{ .path  = (path_arr), \
+	  .depth = sizeof(path_arr) / sizeof((path_arr)[0]), \
+	  .run   = (fn) }
+
+/* CBOR_PATH_DECL(var, path_arr, fn) - declare a cbor_parser with a
+ * compile-time check that the path depth does not exceed
+ * CBOR_RECURSION_MAX_LEVEL. Emits a static_assert error if the depth
+ * limit is violated. */
+#if defined(__cplusplus)
+#define CBOR_STATIC_ASSERT(cond, msg) static_assert(cond, msg)
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define CBOR_STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
+#else
+/* C99 fallback: negative-size array trick */
+#define CBOR_CONCAT_INNER(a, b)	a##b
+#define CBOR_CONCAT(a, b)	CBOR_CONCAT_INNER(a, b)
+#define CBOR_STATIC_ASSERT(cond, msg) \
+	typedef char CBOR_CONCAT(cbor_static_assert_at_line_, __LINE__)[(cond) ? 1 : -1]
+#endif
+
+#define CBOR_PATH_DECL(var, path_arr, fn) \
+	CBOR_STATIC_ASSERT( \
+		sizeof(path_arr) / sizeof((path_arr)[0]) \
+			<= CBOR_RECURSION_MAX_LEVEL, \
+		#var ": path depth exceeds CBOR_RECURSION_MAX_LEVEL"); \
+	static const struct cbor_parser var = CBOR_PATH(path_arr, fn)
 
 bool cbor_unmarshal(cbor_reader_t *reader,
 		const struct cbor_parser *parsers, size_t nr_parsers,
