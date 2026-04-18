@@ -321,7 +321,7 @@ TEST(Helper, ShouldDispatch_WhenWildcardMatchesAnyArrayElement)
 		(*static_cast<int *>(arg))++;
 	};
 	const struct cbor_parser parsers[] = {
-		{ path, sizeof(path)/sizeof(*path), counter_cb },
+		CBOR_PATH(path, counter_cb),
 	};
 
 	LONGS_EQUAL(true, cbor_unmarshal(&reader,
@@ -347,7 +347,7 @@ TEST(Helper, ShouldDispatch_WhenWildcardMatchesAnyTopLevelMapValue)
 		(*static_cast<int *>(arg))++;
 	};
 	const struct cbor_parser parsers[] = {
-		{ path, sizeof(path)/sizeof(*path), counter_cb },
+		CBOR_PATH(path, counter_cb),
 	};
 
 	LONGS_EQUAL(true, cbor_unmarshal(&reader,
@@ -578,7 +578,7 @@ TEST(Helper, ShouldSkipDispatch_WhenMapKeyIsNonStringNonInteger)
 	};
 	static const struct cbor_path_segment path[] = { CBOR_ANY_SEG() };
 	const struct cbor_parser parsers[] = {
-		{ path, sizeof(path)/sizeof(*path), counter_cb },
+		CBOR_PATH(path, counter_cb),
 	};
 
 	LONGS_EQUAL(true, cbor_unmarshal(&reader,
@@ -603,7 +603,7 @@ TEST(Helper, ShouldSkipDispatch_WhenMapKeyIsArray)
 	};
 	static const struct cbor_path_segment path[] = { CBOR_ANY_SEG() };
 	const struct cbor_parser parsers[] = {
-		{ path, sizeof(path)/sizeof(*path), counter_cb },
+		CBOR_PATH(path, counter_cb),
 	};
 
 	LONGS_EQUAL(true, cbor_unmarshal(&reader,
@@ -630,7 +630,7 @@ TEST(Helper, ShouldNotDispatchInsideContainerKey)
 	};
 	static const struct cbor_path_segment path_x[] = { CBOR_STR_SEG("x") };
 	const struct cbor_parser parsers[] = {
-		{ path_x, sizeof(path_x)/sizeof(*path_x), counter_cb },
+		CBOR_PATH(path_x, counter_cb),
 	};
 
 	LONGS_EQUAL(true, cbor_unmarshal(&reader,
@@ -655,7 +655,7 @@ TEST(Helper, ShouldDispatch_WhenTaggedValueUnderStringKey)
 	};
 	static const struct cbor_path_segment path[] = { CBOR_STR_SEG("ts") };
 	const struct cbor_parser parsers[] = {
-		{ path, sizeof(path)/sizeof(*path), counter_cb },
+		CBOR_PATH(path, counter_cb),
 	};
 
 	LONGS_EQUAL(true, cbor_unmarshal(&reader,

@@ -175,7 +175,9 @@ static bool make_map_seg(const cbor_reader_t *reader,
 {
 	if (key->type == CBOR_ITEM_INTEGER) {
 		intmax_t v = 0;
-		cbor_decode(reader, key, &v, sizeof(v));
+		if (cbor_decode(reader, key, &v, sizeof(v)) != CBOR_SUCCESS) {
+			return false;
+		}
 		seg->type = CBOR_KEY_INT;
 		seg->key.idx = v;
 	} else if (key->type == CBOR_ITEM_STRING) {
@@ -267,6 +269,11 @@ static size_t dispatch_value(const cbor_reader_t *reader,
 			seg.type = CBOR_KEY_IDX;
 			seg.key.idx = (intmax_t)array_idx;
 			seg_valid = true;
+		}
+
+		if (parent->type == CBOR_ITEM_MAP && !seg_valid) {
+			return (action == ITER_LEAF) ? 0 :
+				skip_subtree(item + 1, len, remaining_nodes);
 		}
 
 		if (seg_valid) {
