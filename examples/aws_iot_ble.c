@@ -88,7 +88,7 @@ static const struct cbor_parser parsers[] = {
 
 static void on_aws_request(const void *msg, uint16_t msglen)
 {
-	struct aws_request aws_request;
+	struct aws_request aws_request = { 0 };
 
 	cbor_reader_t reader;
 	cbor_item_t items[32];

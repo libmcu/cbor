@@ -35,6 +35,7 @@
  *                              "eth":     { "ip":   "10.0.0.1" } } } }
  */
 
+#include "example.h"
 #include "cbor/helper.h"
 #include "cbor/decoder.h"
 #include <stdio.h>

@@ -38,6 +38,7 @@ typedef void (*example_printer_t)(void const *data, size_t datasize);
 
 void simple_example(example_printer_t print);
 void complex_example(void const *data, size_t datasize, void *udt);
+void path_dispatch_example(void);
 
 #if defined(__cplusplus)
 }

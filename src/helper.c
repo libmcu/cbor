@@ -76,7 +76,10 @@ static void dispatch_item(const cbor_reader_t *reader,
 		const cbor_item_t *item, struct parser_ctx *ctx)
 {
 	/* Prefer exact-path parsers over wildcard parsers.  Run exact matches
-	 * first; fall back to wildcard matches only when no exact match fires. */
+	 * first; fall back to wildcard matches only when no exact match fires.
+	 * All exact-match parsers whose paths match are invoked in registration
+	 * order. Registering multiple parsers for the same path is intentional
+	 * and supported (e.g. one parser processes the value, another logs it). */
 	bool exact_fired = false;
 
 	for (size_t i = 0; i < ctx->nr_parsers; i++) {
