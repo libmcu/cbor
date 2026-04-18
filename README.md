@@ -40,7 +40,7 @@ include(${CBOR_ROOT}/cbor.cmake)
 
 `cbor_unmarshal()` dispatches parsed CBOR nodes to registered callbacks by
 matching each node's position in the tree against a declared path.  A path is
-an ordered list of `cbor_path_segment` values—one per nesting level—built with
+an ordered list of `struct cbor_path_segment` values—one per nesting level—built with
 the `CBOR_STR_SEG`, `CBOR_INT_SEG`, and `CBOR_IDX_SEG` helpers and wrapped
 into a `cbor_parser` via the `CBOR_PATH` macro.
 
