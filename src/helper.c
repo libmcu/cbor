@@ -15,26 +15,26 @@ struct path_stack {
 	size_t depth;
 };
 
-static bool segment_equal(const struct cbor_path_segment *a,
-		const struct cbor_path_segment *b)
+static bool segment_equal(const struct cbor_path_segment *pattern,
+		const struct cbor_path_segment *data)
 {
-	/* Only path segments (a) can be wildcards; data segments (b) never are. */
-	if (a->type == CBOR_KEY_ANY) {
+	/* Only path (pattern) segments can be wildcards; runtime data segments never are. */
+	if (pattern->type == CBOR_KEY_ANY) {
 		return true;
 	}
 
-	if (a->type != b->type) {
+	if (pattern->type != data->type) {
 		return false;
 	}
 
-	switch (a->type) {
+	switch (pattern->type) {
 	case CBOR_KEY_STR:
-		return a->key.str.len == b->key.str.len &&
-			memcmp(a->key.str.ptr, b->key.str.ptr,
-				a->key.str.len) == 0;
+		return pattern->key.str.len == data->key.str.len &&
+			memcmp(pattern->key.str.ptr, data->key.str.ptr,
+				pattern->key.str.len) == 0;
 	case CBOR_KEY_INT:
 	case CBOR_KEY_IDX:
-		return a->key.idx == b->key.idx;
+		return pattern->key.idx == data->key.idx;
 	default:
 		return false;
 	}
@@ -47,7 +47,7 @@ static bool path_matches(const struct path_stack *stack,
 		return false;
 	}
 	for (size_t i = 0; i < p->depth; i++) {
-		if (!segment_equal(&stack->segments[i], &p->path[i])) {
+		if (!segment_equal(&p->path[i], &stack->segments[i])) {
 			return false;
 		}
 	}
