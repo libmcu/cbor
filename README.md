@@ -82,7 +82,7 @@ path.
 
 | Macro | Matches |
 | --- | --- |
-| `CBOR_STR_SEG("key")` | map entry whose text key equals `"key"` (string literal only) |
+| `CBOR_STR_SEG("key")` | map entry whose CBOR string key (text or byte string) equals `"key"` (string literal only) |
 | `CBOR_INT_SEG(n)` | map entry whose integer key equals `n` |
 | `CBOR_IDX_SEG(n)` | the `n`-th element (0-based) of an enclosing array |
 | `CBOR_ANY_SEG()` | any map value whose key is a string or integer, or any array element at this depth (wildcard; map values under other key types are skipped; does not match map keys) |
