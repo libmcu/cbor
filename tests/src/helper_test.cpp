@@ -20,7 +20,7 @@ static void on_item(const cbor_reader_t *reader,
 	(void)item;
 	(void)arg;
 
-	const char *name = static_cast<const char *>(parser->path[parser->depth - 1].key.str.ptr);
+	const char *name = reinterpret_cast<const char *>(parser->path[parser->depth - 1].val);
 	mock().actualCall(name);
 }
 
@@ -32,7 +32,7 @@ static void on_int_item(const cbor_reader_t *reader,
 	(void)item;
 	(void)arg;
 
-	intmax_t key = parser->path[parser->depth - 1].key.idx;
+	intmax_t key = (intmax_t)parser->path[parser->depth - 1].val;
 	if (key == 1) {
 		mock().actualCall("parse_intkey_1");
 	} else if (key == 2) {

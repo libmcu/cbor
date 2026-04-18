@@ -29,12 +29,12 @@ static bool segment_equal(const struct cbor_path_segment *pattern,
 
 	switch (pattern->type) {
 	case CBOR_KEY_STR:
-		return pattern->key.str.len == data->key.str.len &&
-			memcmp(pattern->key.str.ptr, data->key.str.ptr,
-				pattern->key.str.len) == 0;
+		return pattern->len == data->len &&
+			memcmp((const void *)pattern->val,
+				(const void *)data->val, pattern->len) == 0;
 	case CBOR_KEY_INT:
 	case CBOR_KEY_IDX:
-		return pattern->key.idx == data->key.idx;
+		return pattern->val == data->val;
 	case CBOR_KEY_ANY: /* fall through */
 	default:
 		return false;
@@ -207,11 +207,13 @@ static bool make_map_seg(const cbor_reader_t *reader,
 			return false;
 		}
 		seg->type = CBOR_KEY_INT;
-		seg->key.idx = v;
+		seg->val = (intptr_t)v;
+		seg->len = 0;
 	} else if (key->type == CBOR_ITEM_STRING) {
+		const void *p = cbor_decode_pointer(reader, key);
 		seg->type = CBOR_KEY_STR;
-		seg->key.str.ptr = cbor_decode_pointer(reader, key);
-		seg->key.str.len = key->size;
+		seg->val = (intptr_t)(uintptr_t)p;
+		seg->len = key->size;
 	} else {
 		return false;
 	}
@@ -295,7 +297,8 @@ static size_t dispatch_value(const cbor_reader_t *reader,
 			seg_valid = make_map_seg(reader, key_item, &seg);
 		} else if (parent->type == CBOR_ITEM_ARRAY) {
 			seg.type = CBOR_KEY_IDX;
-			seg.key.idx = (intmax_t)array_idx;
+			seg.val = (intptr_t)array_idx;
+			seg.len = 0;
 			seg_valid = true;
 		}
 

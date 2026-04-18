@@ -32,17 +32,10 @@ typedef enum {
 	CBOR_KEY_ANY, /**< wildcard: matches any key type or index at this depth */
 } cbor_key_type_t;
 
-typedef union {
-	struct {
-		const void *ptr;
-		size_t len;
-	} str;
-	intmax_t idx;
-} cbor_key_t;
-
 struct cbor_path_segment {
 	cbor_key_type_t type;
-	cbor_key_t key;
+	intptr_t        val; /* STR: (intptr_t)ptr; INT/IDX: signed index */
+	size_t          len; /* STR: byte length; otherwise 0 */
 };
 
 struct cbor_parser {
@@ -53,61 +46,18 @@ struct cbor_parser {
 			const cbor_item_t *item, void *arg);
 };
 
-#if defined(__cplusplus)
-static inline struct cbor_path_segment cbor_str_seg(const char *s, size_t len)
-{
-	struct cbor_path_segment seg;
-	seg.type = CBOR_KEY_STR;
-	seg.key.str.ptr = s;
-	seg.key.str.len = len;
-	return seg;
-}
-static inline struct cbor_path_segment cbor_int_seg(intmax_t n)
-{
-	struct cbor_path_segment seg;
-	seg.type = CBOR_KEY_INT;
-	seg.key.idx = n;
-	return seg;
-}
-static inline struct cbor_path_segment cbor_idx_seg(intmax_t n)
-{
-	struct cbor_path_segment seg;
-	seg.type = CBOR_KEY_IDX;
-	seg.key.idx = n;
-	return seg;
-}
-static inline struct cbor_path_segment cbor_any_seg(void)
-{
-	struct cbor_path_segment seg;
-	seg.type = CBOR_KEY_ANY;
-	seg.key.idx = 0;
-	return seg;
-}
-/** Matches a map string key (literal string). */
-#define CBOR_STR_SEG(s)		cbor_str_seg((s), sizeof(s) - 1)
-/** Matches a map integer key. */
-#define CBOR_INT_SEG(n)		cbor_int_seg((intmax_t)(n))
-/** Matches an array element at a specific 0-based index. */
-#define CBOR_IDX_SEG(n)		cbor_idx_seg((intmax_t)(n))
-/** Wildcard: matches any map value whose key is a string or integer, or any
- * array element at this depth. Map values under other key types (e.g. float,
- * array keys) are skipped by the dispatcher and will not match. Does NOT
- * match map keys themselves. */
-#define CBOR_ANY_SEG()		cbor_any_seg()
-#else
 /** Matches a map string key (literal string). */
 #define CBOR_STR_SEG(s) \
-	{ CBOR_KEY_STR, { .str = { (s), sizeof(s) - 1 } } }
+	{ CBOR_KEY_STR, (intptr_t)(const void *)(s), sizeof(s) - 1 }
 /** Matches a map integer key. */
-#define CBOR_INT_SEG(n)		{ CBOR_KEY_INT, { .idx = (intmax_t)(n) } }
+#define CBOR_INT_SEG(n)		{ CBOR_KEY_INT, (intptr_t)(n), 0 }
 /** Matches an array element at a specific 0-based index. */
-#define CBOR_IDX_SEG(n)		{ CBOR_KEY_IDX, { .idx = (intmax_t)(n) } }
+#define CBOR_IDX_SEG(n)		{ CBOR_KEY_IDX, (intptr_t)(n), 0 }
 /** Wildcard: matches any map value whose key is a string or integer, or any
  * array element at this depth. Map values under other key types (e.g. float,
  * array keys) are skipped by the dispatcher and will not match. Does NOT
  * match map keys themselves. */
-#define CBOR_ANY_SEG()		{ CBOR_KEY_ANY, { 0 } }
-#endif /* __cplusplus */
+#define CBOR_ANY_SEG()		{ CBOR_KEY_ANY, 0, 0 }
 
 /*
  * CBOR_PATH(path_arr, fn) - declare a cbor_parser from a named path array.
