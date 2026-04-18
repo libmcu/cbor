@@ -67,12 +67,25 @@ struct cbor_parser {
  * the element count at compile time so depth stays in sync automatically.
  *
  * Maximum matchable depth is CBOR_RECURSION_MAX_LEVEL (default 8).
- * Paths longer than this limit are silently unmatched.
+ * Use CBOR_PATH_DECL to catch depth violations at compile time.
  */
 #define CBOR_PATH(path_arr, fn) \
 	{ .path  = (path_arr), \
 	  .depth = sizeof(path_arr) / sizeof((path_arr)[0]), \
 	  .run   = (fn) }
+
+/*
+ * CBOR_PATH_DECL(var, path_arr, fn) - declare a cbor_parser with a
+ * compile-time check that the path depth does not exceed
+ * CBOR_RECURSION_MAX_LEVEL. Emits a _Static_assert error if the depth
+ * limit is violated.
+ */
+#define CBOR_PATH_DECL(var, path_arr, fn) \
+	_Static_assert( \
+		sizeof(path_arr) / sizeof((path_arr)[0]) \
+			<= CBOR_RECURSION_MAX_LEVEL, \
+		#var ": path depth exceeds CBOR_RECURSION_MAX_LEVEL"); \
+	static const struct cbor_parser var = CBOR_PATH(path_arr, fn)
 
 bool cbor_unmarshal(cbor_reader_t *reader,
 		const struct cbor_parser *parsers, size_t nr_parsers,

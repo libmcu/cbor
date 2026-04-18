@@ -288,6 +288,22 @@ TEST(Helper, ShouldReturnFalse_WhenMalformedMessage)
 					  msg, sizeof(msg), nullptr));
 }
 
+TEST(Helper, ShouldReturnFalse_WhenParserDepthExceedsLimit)
+{
+	static const uint8_t msg[] = { 0xA1, 0x61, 0x61, 0x01 };
+
+	/* Manually set depth to CBOR_RECURSION_MAX_LEVEL + 1 */
+	static const struct cbor_path_segment path[] = {
+		CBOR_STR_SEG("a")
+	};
+	struct cbor_parser parser = CBOR_PATH(path, on_item);
+	parser.depth = CBOR_RECURSION_MAX_LEVEL + 1;
+
+	LONGS_EQUAL(false, cbor_unmarshal(&reader,
+					  &parser, 1,
+					  msg, sizeof(msg), nullptr));
+}
+
 TEST(Helper, ShouldDispatch_WhenWildcardMatchesAnyArrayElement)
 {
 	/* {"items": [10, 20, 30]} */

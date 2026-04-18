@@ -351,6 +351,12 @@ bool cbor_unmarshal(cbor_reader_t *reader, const struct cbor_parser *parsers,
 		return false;
 	}
 
+	for (size_t i = 0; i < nr_parsers; i++) {
+		if (parsers[i].depth > CBOR_RECURSION_MAX_LEVEL) {
+			return false;
+		}
+	}
+
 	struct path_stack stack = { .depth = 0 };
 	struct parser_ctx ctx = {
 		.parsers    = parsers,
