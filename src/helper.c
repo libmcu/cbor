@@ -75,31 +75,37 @@ static bool path_has_wildcard(const struct cbor_parser *p)
 static void dispatch_item(const cbor_reader_t *reader,
 		const cbor_item_t *item, struct parser_ctx *ctx)
 {
-	/* Prefer exact-path parsers over wildcard parsers.  Run exact matches
-	 * first; fall back to wildcard matches only when no exact match fires.
+	/* Single pass: run exact matches immediately; collect wildcard matches
+	 * for deferred execution only if no exact match fires.
 	 * All exact-match parsers whose paths match are invoked in registration
 	 * order. Registering multiple parsers for the same path is intentional
-	 * and supported (e.g. one parser processes the value, another logs it). */
+	 * and supported (e.g. one parser processes the value, another logs it).
+	 * At most CBOR_MAX_WILDCARD_PARSERS (default 8) wildcard parsers are
+	 * collected per dispatch; additional matches beyond that limit are
+	 * silently dropped in registration order. Raise CBOR_MAX_WILDCARD_PARSERS
+	 * at build time if more wildcard parsers are needed. */
+	const struct cbor_parser *wc[CBOR_MAX_WILDCARD_PARSERS];
+	size_t nr_wc = 0;
 	bool exact_fired = false;
 
 	for (size_t i = 0; i < ctx->nr_parsers; i++) {
 		const struct cbor_parser *p = &ctx->parsers[i];
-		if (p->run && path_matches(ctx->stack, p) &&
-				!path_has_wildcard(p)) {
+		if (!p->run || !path_matches(ctx->stack, p)) {
+			continue;
+		}
+		if (path_has_wildcard(p)) {
+			if (nr_wc < CBOR_MAX_WILDCARD_PARSERS) {
+				wc[nr_wc++] = p;
+			}
+		} else {
 			p->run(reader, p, item, ctx->arg);
 			exact_fired = true;
 		}
 	}
 
-	if (exact_fired) {
-		return;
-	}
-
-	for (size_t i = 0; i < ctx->nr_parsers; i++) {
-		const struct cbor_parser *p = &ctx->parsers[i];
-		if (p->run && path_matches(ctx->stack, p) &&
-				path_has_wildcard(p)) {
-			p->run(reader, p, item, ctx->arg);
+	if (!exact_fired) {
+		for (size_t i = 0; i < nr_wc; i++) {
+			wc[i]->run(reader, wc[i], item, ctx->arg);
 		}
 	}
 }

@@ -15,6 +15,13 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
+#if !defined(CBOR_MAX_WILDCARD_PARSERS)
+#define CBOR_MAX_WILDCARD_PARSERS	8
+#endif
+#if CBOR_MAX_WILDCARD_PARSERS < 1
+#error "CBOR_MAX_WILDCARD_PARSERS must be >= 1"
+#endif
+
 /**
  * Key type for a path segment.
  *
@@ -62,26 +69,22 @@ struct cbor_parser {
  * match map keys themselves. */
 #define CBOR_ANY_SEG()		{ CBOR_KEY_ANY, 0, 0 }
 
-/*
- * CBOR_PATH(path_arr, fn) - declare a cbor_parser from a named path array.
+/* CBOR_PATH(path_arr, fn) - declare a cbor_parser from a named path array.
  *
  * path_arr MUST be a named array variable, not a pointer.  sizeof() computes
  * the element count at compile time so depth stays in sync automatically.
  *
  * Maximum matchable depth is CBOR_RECURSION_MAX_LEVEL (default 8).
- * Use CBOR_PATH_DECL to catch depth violations at compile time.
- */
+ * Use CBOR_PATH_DECL to catch depth violations at compile time. */
 #define CBOR_PATH(path_arr, fn) \
 	{ .path  = (path_arr), \
 	  .depth = sizeof(path_arr) / sizeof((path_arr)[0]), \
 	  .run   = (fn) }
 
-/*
- * CBOR_PATH_DECL(var, path_arr, fn) - declare a cbor_parser with a
+/* CBOR_PATH_DECL(var, path_arr, fn) - declare a cbor_parser with a
  * compile-time check that the path depth does not exceed
  * CBOR_RECURSION_MAX_LEVEL. Emits a static_assert error if the depth
- * limit is violated.
- */
+ * limit is violated. */
 #if defined(__cplusplus)
 #define CBOR_STATIC_ASSERT(cond, msg) static_assert(cond, msg)
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
