@@ -170,10 +170,10 @@ static size_t iterate_each(const cbor_reader_t *reader,
 	return i + extra;
 }
 
-static struct cbor_path_segment make_map_seg(const cbor_reader_t *reader,
-		const cbor_item_t *value, const cbor_item_t *parent)
+static bool make_map_seg(const cbor_reader_t *reader,
+		const cbor_item_t *value, const cbor_item_t *parent,
+		struct cbor_path_segment *seg)
 {
-	struct cbor_path_segment seg;
 	const cbor_item_t *key = value - 1;
 
 	while (key > parent && key->type == CBOR_ITEM_TAG) {
@@ -183,15 +183,17 @@ static struct cbor_path_segment make_map_seg(const cbor_reader_t *reader,
 	if (key->type == CBOR_ITEM_INTEGER) {
 		intmax_t v = 0;
 		cbor_decode(reader, key, &v, sizeof(v));
-		seg.type = CBOR_KEY_INT;
-		seg.key.idx = v;
+		seg->type = CBOR_KEY_INT;
+		seg->key.idx = v;
+	} else if (key->type == CBOR_ITEM_STRING) {
+		seg->type = CBOR_KEY_STR;
+		seg->key.str.ptr = cbor_decode_pointer(reader, key);
+		seg->key.str.len = key->size;
 	} else {
-		seg.type = CBOR_KEY_STR;
-		seg.key.str.ptr = cbor_decode_pointer(reader, key);
-		seg.key.str.len = key->size;
+		return false;
 	}
 
-	return seg;
+	return true;
 }
 
 static bool make_seg(const cbor_reader_t *reader,
@@ -206,8 +208,7 @@ static bool make_seg(const cbor_reader_t *reader,
 		if ((pos % 2) == 0) {
 			return false;
 		}
-		*out = make_map_seg(reader, item, parent);
-		return true;
+		return make_map_seg(reader, item, parent, out);
 	}
 
 	if (parent->type == CBOR_ITEM_ARRAY) {
@@ -354,6 +355,9 @@ bool cbor_unmarshal(cbor_reader_t *reader, const struct cbor_parser *parsers,
 
 	for (size_t i = 0; i < nr_parsers; i++) {
 		if (parsers[i].depth > CBOR_RECURSION_MAX_LEVEL) {
+			return false;
+		}
+		if (parsers[i].depth > 0 && parsers[i].path == NULL) {
 			return false;
 		}
 	}

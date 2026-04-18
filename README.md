@@ -82,9 +82,10 @@ path.
 
 | Macro | Matches |
 | --- | --- |
-| `CBOR_STR_SEG("key")` | map entry whose text key equals `"key"` |
+| `CBOR_STR_SEG("key")` | map entry whose text key equals `"key"` (string literal only) |
 | `CBOR_INT_SEG(n)` | map entry whose integer key equals `n` |
 | `CBOR_IDX_SEG(n)` | the `n`-th element (0-based) of an enclosing array |
+| `CBOR_ANY_SEG()` | any map value or any array element at this depth (wildcard; does not match map keys) |
 
 Example — same key `"id"` appears under two different parents:
 
@@ -499,4 +500,5 @@ how many tags are stacked.
   cannot be represented in `cbor_item_t.size`; `cbor_parse()` returns
   `CBOR_INVALID` for such values
 * `cbor_unmarshal()` supports map (string or integer keys) and array (index)
-  path segments, but the root of the CBOR message must be a map or array
+  path segments; if the CBOR message root is neither a map nor an array, no
+  path segment is pushed and only depth-0 parsers will match

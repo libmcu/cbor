@@ -78,11 +78,17 @@ struct cbor_parser {
 /*
  * CBOR_PATH_DECL(var, path_arr, fn) - declare a cbor_parser with a
  * compile-time check that the path depth does not exceed
- * CBOR_RECURSION_MAX_LEVEL. Emits a _Static_assert error if the depth
+ * CBOR_RECURSION_MAX_LEVEL. Emits a static_assert error if the depth
  * limit is violated.
  */
+#if defined(__cplusplus)
+#define CBOR_STATIC_ASSERT(cond, msg) static_assert(cond, msg)
+#else
+#define CBOR_STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
+#endif
+
 #define CBOR_PATH_DECL(var, path_arr, fn) \
-	_Static_assert( \
+	CBOR_STATIC_ASSERT( \
 		sizeof(path_arr) / sizeof((path_arr)[0]) \
 			<= CBOR_RECURSION_MAX_LEVEL, \
 		#var ": path depth exceeds CBOR_RECURSION_MAX_LEVEL"); \

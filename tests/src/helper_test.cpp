@@ -550,3 +550,39 @@ TEST(Helper, ShouldStringifyExcessiveWhenLimitExceeded)
 {
 	STRCMP_EQUAL("excessive nesting", cbor_stringify_error(CBOR_EXCESSIVE));
 }
+
+TEST(Helper, ShouldReturnFalse_WhenParserPathIsNullWithNonZeroDepth)
+{
+	static const uint8_t msg[] = { 0xA1, 0x61, 0x61, 0x01 };
+
+	struct cbor_parser parser = { NULL, 1, on_item };
+
+	LONGS_EQUAL(false, cbor_unmarshal(&reader,
+					  &parser, 1,
+					  msg, sizeof(msg), nullptr));
+}
+
+TEST(Helper, ShouldSkipDispatch_WhenMapKeyIsNonStringNonInteger)
+{
+	/* {1.5: 42} — float key, value 42 */
+	static const uint8_t msg[] = {
+		0xA1,                   /* map(1) */
+		0xF9, 0x3E, 0x00,       /* float16(1.5) as key */
+		0x18, 0x2A              /* unsigned(42) as value */
+	};
+
+	int count = 0;
+	auto counter_cb = [](const cbor_reader_t *, const struct cbor_parser *,
+			     const cbor_item_t *, void *arg) {
+		(*static_cast<int *>(arg))++;
+	};
+	static const struct cbor_path_segment path[] = { CBOR_ANY_SEG() };
+	const struct cbor_parser parsers[] = {
+		{ path, sizeof(path)/sizeof(*path), counter_cb },
+	};
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), &count));
+	LONGS_EQUAL(0, count);
+}
