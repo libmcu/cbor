@@ -57,8 +57,9 @@ struct cbor_parser {
 #define CBOR_INT_SEG(n)		{ CBOR_KEY_INT, { .idx = (intmax_t)(n) } }
 /** Matches an array element at a specific 0-based index. */
 #define CBOR_IDX_SEG(n)		{ CBOR_KEY_IDX, { .idx = (intmax_t)(n) } }
-/** Wildcard: matches any map key (string or integer) or any array index. */
-#define CBOR_ANY_SEG()		{ CBOR_KEY_ANY, { .idx = 0 } }
+/** Wildcard: matches any map value (regardless of its key type or value) or
+ * any array element at this depth. Does NOT match map keys themselves. */
+#define CBOR_ANY_SEG()		{ CBOR_KEY_ANY, { 0 } }
 
 /*
  * CBOR_PATH(path_arr, fn) - declare a cbor_parser from a named path array.

@@ -18,7 +18,8 @@ struct path_stack {
 static bool segment_equal(const struct cbor_path_segment *a,
 		const struct cbor_path_segment *b)
 {
-	if (a->type == CBOR_KEY_ANY || b->type == CBOR_KEY_ANY) {
+	/* Only path segments (a) can be wildcards; data segments (b) never are. */
+	if (a->type == CBOR_KEY_ANY) {
 		return true;
 	}
 
