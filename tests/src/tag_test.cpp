@@ -417,8 +417,9 @@ static void on_value(const cbor_reader_t *reader,
 	}
 }
 
+static const struct cbor_path_segment path_k[] = { CBOR_STR_SEG("k") };
 static const struct cbor_parser kv_parsers[] = {
-	{ .key = "k", .keylen = 1, .run = on_value },
+	CBOR_PATH(path_k, on_value),
 };
 
 TEST_GROUP(TagUnmarshal)

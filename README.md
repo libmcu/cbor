@@ -38,6 +38,12 @@ include(${CBOR_ROOT}/cbor.cmake)
 
 ## Usage
 
+`cbor_unmarshal()` dispatches parsed CBOR nodes to registered callbacks by
+matching each node's position in the tree against a declared path.  A path is
+an ordered list of `cbor_path_segment` values—one per nesting level—built with
+the `CBOR_STR_SEG`, `CBOR_INT_SEG`, and `CBOR_IDX_SEG` helpers and wrapped
+into a `cbor_parser` via the `CBOR_PATH` macro.
+
 ```c
 static void parse_cert(const cbor_reader_t *reader,
 		const struct cbor_parser *parser,
@@ -52,9 +58,12 @@ static void parse_key(const cbor_reader_t *reader,
 	cbor_decode(reader, item, out->key, sizeof(out->key));
 }
 
+static const struct cbor_path_segment path_cert[] = { CBOR_STR_SEG("certificate") };
+static const struct cbor_path_segment path_key[]  = { CBOR_STR_SEG("privateKey") };
+
 static const struct cbor_parser parsers[] = {
-	{ .key = "certificate", .run = parse_cert },
-	{ .key = "privateKey",  .run = parse_key },
+	CBOR_PATH(path_cert, parse_cert),
+	CBOR_PATH(path_key,  parse_key),
 };
 
 cbor_reader_t reader;
@@ -63,11 +72,45 @@ cbor_item_t items[MAX_ITEMS];
 cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
 cbor_unmarshal(&reader, parsers, sizeof(parsers) / sizeof(*parsers),
 		msg, msglen, &your_data_type);
-
-...
 ```
 
-Please refer to [examples](examples).
+### Path-based dispatch
+
+Paths of any depth are supported.  Each segment specifies one key in the
+nesting hierarchy.  All three key kinds can be mixed freely within a single
+path.
+
+| Macro | Matches |
+| --- | --- |
+| `CBOR_STR_SEG("key")` | map entry whose text key equals `"key"` |
+| `CBOR_INT_SEG(n)` | map entry whose integer key equals `n` |
+| `CBOR_IDX_SEG(n)` | the `n`-th element (0-based) of an enclosing array |
+
+Example — same key `"id"` appears under two different parents:
+
+```c
+static const struct cbor_path_segment path_dev_ba[] = {
+    CBOR_STR_SEG("dev"),  CBOR_STR_SEG("id")
+};
+static const struct cbor_path_segment path_prod_ba[] = {
+    CBOR_STR_SEG("prod"), CBOR_STR_SEG("id")
+};
+static const struct cbor_parser parsers[] = {
+    CBOR_PATH(path_dev_ba,  on_dev_ba_id),
+    CBOR_PATH(path_prod_ba, on_prod_ba_id),
+};
+```
+
+Example — array element addressed by index (depth 3):
+
+```c
+static const struct cbor_path_segment path_item0_name[] = {
+    CBOR_STR_SEG("items"), CBOR_IDX_SEG(0), CBOR_STR_SEG("name")
+};
+```
+
+Please refer to [examples](examples) for complete runnable code including
+depth-4 nested maps and mixed string/integer/index paths.
 
 ### Option
 
@@ -455,4 +498,5 @@ how many tags are stacked.
 * On 32-bit targets where `size_t` is 32 bits, tag numbers above `2^32 - 1`
   cannot be represented in `cbor_item_t.size`; `cbor_parse()` returns
   `CBOR_INVALID` for such values
-* `cbor_unmarshal()` only works on the major type 5: map with string key
+* `cbor_unmarshal()` supports map (string or integer keys) and array (index)
+  path segments, but the root of the CBOR message must be a map or array
