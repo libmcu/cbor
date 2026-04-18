@@ -1,3 +1,25 @@
+## v0.6.0 - April 18, 2026
+- **Breaking Change**: Replace `.key`/`.keylen` parser API with path-based API in `cbor_unmarshal`
+- Add path-based dispatch to `cbor_unmarshal`
+- Add wildcard path segment for CBOR parser
+- Add compile-time path depth check macro
+- Fix wildcard macro and matching logic clarification
+
+## v0.5.0 - April 2, 2026
+- Add streaming CBOR decoder API
+
+## v0.4.0 - April 2, 2026
+- Add CBOR tag support for encoding and parsing
+- Fix text string overrun handling in encoder
+- Fix encoder rejecting non-negative input for negative integer
+
+## v0.3.2 - April 1, 2026
+- Add `cbor_count_items` for dry-run item counting
+- Fix iteration logic in `iterate_each`
+- Fix out-of-bound access in `iterate_each` helper
+- Fix out-of-bound access on unmarshal in helper
+- Add int key unmarshal support in helper
+
 ## v0.3.1 - December 9, 2022
 - Add CMake scaffolding
 - Fix garbage data in the uninitialized buffer when decoding
