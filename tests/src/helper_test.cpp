@@ -586,3 +586,80 @@ TEST(Helper, ShouldSkipDispatch_WhenMapKeyIsNonStringNonInteger)
 					 msg, sizeof(msg), &count));
 	LONGS_EQUAL(0, count);
 }
+
+TEST(Helper, ShouldSkipDispatch_WhenMapKeyIsArray)
+{
+	/* {[1, 2]: 42} — array key, value 42 */
+	static const uint8_t msg[] = {
+		0xA1,                   /* map(1) */
+		0x82, 0x01, 0x02,       /* [1, 2] as key */
+		0x18, 0x2A              /* unsigned(42) as value */
+	};
+
+	int count = 0;
+	auto counter_cb = [](const cbor_reader_t *, const struct cbor_parser *,
+			     const cbor_item_t *, void *arg) {
+		(*static_cast<int *>(arg))++;
+	};
+	static const struct cbor_path_segment path[] = { CBOR_ANY_SEG() };
+	const struct cbor_parser parsers[] = {
+		{ path, sizeof(path)/sizeof(*path), counter_cb },
+	};
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), &count));
+	LONGS_EQUAL(0, count);
+}
+
+TEST(Helper, ShouldNotDispatchInsideContainerKey)
+{
+	/* {[99]: 42, "x": 1} — array key followed by a valid string key */
+	static const uint8_t msg[] = {
+		0xA2,                   /* map(2) */
+		0x81, 0x18, 0x63,       /* [99] as key */
+		0x18, 0x2A,             /* unsigned(42) as value */
+		0x61, 0x78,             /* "x" as key */
+		0x01                    /* 1 as value */
+	};
+
+	int count = 0;
+	auto counter_cb = [](const cbor_reader_t *, const struct cbor_parser *,
+			     const cbor_item_t *, void *arg) {
+		(*static_cast<int *>(arg))++;
+	};
+	static const struct cbor_path_segment path_x[] = { CBOR_STR_SEG("x") };
+	const struct cbor_parser parsers[] = {
+		{ path_x, sizeof(path_x)/sizeof(*path_x), counter_cb },
+	};
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), &count));
+	LONGS_EQUAL(1, count);
+}
+
+TEST(Helper, ShouldDispatch_WhenTaggedValueUnderStringKey)
+{
+	/* {"ts": tag(1, 1000000000)} */
+	static const uint8_t msg[] = {
+		0xA1,                           /* map(1) */
+		0x62, 0x74, 0x73,               /* "ts" */
+		0xC1, 0x1A, 0x3B, 0x9A, 0xCA, 0x00  /* tag(1, 1000000000) */
+	};
+
+	int count = 0;
+	auto counter_cb = [](const cbor_reader_t *, const struct cbor_parser *,
+			     const cbor_item_t *, void *arg) {
+		(*static_cast<int *>(arg))++;
+	};
+	static const struct cbor_path_segment path[] = { CBOR_STR_SEG("ts") };
+	const struct cbor_parser parsers[] = {
+		{ path, sizeof(path)/sizeof(*path), counter_cb },
+	};
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), &count));
+	LONGS_EQUAL(1, count);
+}
