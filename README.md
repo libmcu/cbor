@@ -76,9 +76,9 @@ cbor_unmarshal(&reader, parsers, sizeof(parsers) / sizeof(*parsers),
 
 ### Path-based dispatch
 
-Paths of any depth are supported.  Each segment specifies one key in the
-nesting hierarchy.  All three key kinds can be mixed freely within a single
-path.
+Paths up to `CBOR_RECURSION_MAX_LEVEL` deep are supported (default 8).  Each
+segment specifies one key in the nesting hierarchy.  All three key kinds can be
+mixed freely within a single path.
 
 | Macro | Matches |
 | --- | --- |
