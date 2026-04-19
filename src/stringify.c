@@ -29,7 +29,7 @@ const char *cbor_stringify_error(cbor_error_t err)
 	}
 }
 
-const char *cbor_stringify_item(cbor_item_t *item)
+const char *cbor_stringify_item(const cbor_item_t *item)
 {
 	switch (item->type) {
 	case CBOR_ITEM_INTEGER:

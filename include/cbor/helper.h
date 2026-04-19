@@ -231,7 +231,7 @@ const char *cbor_stringify_error(cbor_error_t err);
  * @param[in] item CBOR item.
  * @return String representation of item.
  */
-const char *cbor_stringify_item(cbor_item_t *item);
+const char *cbor_stringify_item(const cbor_item_t *item);
 
 #if defined(__cplusplus)
 }

@@ -52,6 +52,7 @@ static void capture_stdout(void (*fn)(void), char *buf, size_t bufsize)
 	FILE *tmp = tmpfile();
 	CHECK_TEXT(tmp != NULL, "tmpfile failed");
 
+	fflush(stdout);
 	int saved_stdout = dup(fileno(stdout));
 	CHECK_TEXT(saved_stdout >= 0, "dup failed");
 	CHECK_TEXT(dup2(fileno(tmp), fileno(stdout)) >= 0, "dup2 redirect failed");
