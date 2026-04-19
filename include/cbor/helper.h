@@ -86,9 +86,11 @@ struct cbor_parser {
  * segments, without a named path array variable.
  *
  * In C (C99/C11): uses compound literals; depth is computed at compile time
- * via sizeof. The compound-literal path has block lifetime, so this form is
- * only safe when the parser object does not outlive the enclosing block. For
- * static/file-scope parsers, use CBOR_PATH_INLINE_DECL.
+ * via sizeof. At file scope, the compound-literal path has static storage
+ * duration and is safe. At block scope, the path has the lifetime of the
+ * enclosing block; do not use this for a function-scope static parser or
+ * when returning or storing the parser (or its path pointer) beyond the
+ * block. Use CBOR_PATH_INLINE_DECL in those cases.
  *
  * In C++11 and later: uses an immediately-invoked lambda with a static
  * segment array. Includes a compile-time depth check against
