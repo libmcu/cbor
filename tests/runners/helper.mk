@@ -9,6 +9,7 @@ SRC_FILES = \
 	../src/common.c \
 
 TEST_SRC_FILES = \
+	src/helper_inline_decl_test.c \
 	src/helper_test.cpp \
 	src/test_all.cpp \
 

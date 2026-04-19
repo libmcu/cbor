@@ -86,7 +86,9 @@ struct cbor_parser {
  * segments, without a named path array variable.
  *
  * In C (C99/C11): uses compound literals; depth is computed at compile time
- * via sizeof. No compile-time depth-limit check; use CBOR_PATH_DECL for that.
+ * via sizeof. The compound-literal path has block lifetime, so this form is
+ * only safe when the parser object does not outlive the enclosing block. For
+ * static/file-scope parsers, use CBOR_PATH_INLINE_DECL.
  *
  * In C++11 and later: uses an immediately-invoked lambda with a static
  * segment array. Includes a compile-time depth check against
@@ -102,7 +104,9 @@ struct cbor_parser {
  */
 #if defined(__cplusplus)
 #define CBOR_PATH_INLINE(fn, ...) \
-	([&]() -> struct cbor_parser { \
+	([](void (*cbor_run_)(const cbor_reader_t *, \
+			const struct cbor_parser *, \
+			const cbor_item_t *, void *)) -> struct cbor_parser { \
 		static const struct cbor_path_segment cbor_path_segs_[] = { __VA_ARGS__ }; \
 		static_assert( \
 			sizeof(cbor_path_segs_) / sizeof(cbor_path_segs_[0]) \
@@ -111,10 +115,10 @@ struct cbor_parser {
 		struct cbor_parser cbor_p_ = { \
 			cbor_path_segs_, \
 			sizeof(cbor_path_segs_) / sizeof(cbor_path_segs_[0]), \
-			(fn) \
+			cbor_run_ \
 		}; \
 		return cbor_p_; \
-	}())
+	}(fn))
 #else
 #define CBOR_PATH_INLINE(fn, ...) { \
 	.path = (const struct cbor_path_segment[]){ __VA_ARGS__ }, \
@@ -128,14 +132,14 @@ struct cbor_parser {
  * compile-time check that the path depth does not exceed
  * CBOR_RECURSION_MAX_LEVEL. Emits a static_assert error if the depth
  * limit is violated. */
+#define CBOR_CONCAT_INNER(a, b)	a##b
+#define CBOR_CONCAT(a, b)	CBOR_CONCAT_INNER(a, b)
 #if defined(__cplusplus)
 #define CBOR_STATIC_ASSERT(cond, msg) static_assert(cond, msg)
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #define CBOR_STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
 #else
 /* C99 fallback: negative-size array trick */
-#define CBOR_CONCAT_INNER(a, b)	a##b
-#define CBOR_CONCAT(a, b)	CBOR_CONCAT_INNER(a, b)
 #define CBOR_STATIC_ASSERT(cond, msg) \
 	typedef char CBOR_CONCAT(cbor_static_assert_at_line_, __LINE__)[(cond) ? 1 : -1]
 #endif
@@ -146,6 +150,14 @@ struct cbor_parser {
 			<= CBOR_RECURSION_MAX_LEVEL, \
 		#var ": path depth exceeds CBOR_RECURSION_MAX_LEVEL"); \
 	static const struct cbor_parser var = CBOR_PATH(path_arr, fn)
+
+/* CBOR_PATH_INLINE_DECL(var, fn, seg, ...) - declare a cbor_parser from
+ * inline path segments with static storage for the backing path array and a
+ * compile-time depth check. Use this for file-scope parsers and block-scope
+ * static parsers in C/C++. */
+#define CBOR_PATH_INLINE_DECL(var, fn, ...) \
+	static const struct cbor_path_segment CBOR_CONCAT(var, _path)[] = { __VA_ARGS__ }; \
+	CBOR_PATH_DECL(var, CBOR_CONCAT(var, _path), fn)
 
 bool cbor_unmarshal(cbor_reader_t *reader,
 		const struct cbor_parser *parsers, size_t nr_parsers,
