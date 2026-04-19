@@ -42,6 +42,40 @@ static void on_int_item(const cbor_reader_t *reader,
 }
 
 
+static void on_sub_item(const cbor_reader_t *reader,
+			const struct cbor_parser *parser,
+			const cbor_item_t *item, void *arg)
+{
+	(void)reader;
+	(void)item;
+	(void)arg;
+
+	const char *name = reinterpret_cast<const char *>(
+		parser->path[parser->depth - 1].val);
+	mock().actualCall(name);
+}
+
+static void on_sub_dispatch(const cbor_reader_t *reader,
+			     const struct cbor_parser *,
+			     const cbor_item_t *item, void *arg)
+{
+	static const struct cbor_parser sub[] = {
+		CBOR_PATH_INLINE(on_sub_item, CBOR_STR_SEG("a")),
+		CBOR_PATH_INLINE(on_sub_item, CBOR_STR_SEG("b")),
+	};
+	cbor_dispatch(reader, item, sub, sizeof(sub) / sizeof(sub[0]), arg);
+}
+
+static void on_array_elem_dispatch(const cbor_reader_t *reader,
+				   const struct cbor_parser *,
+				   const cbor_item_t *item, void *arg)
+{
+	static const struct cbor_parser sub[] = {
+		CBOR_PATH_INLINE(on_sub_item, CBOR_STR_SEG("id")),
+	};
+	cbor_dispatch(reader, item, sub, sizeof(sub) / sizeof(sub[0]), arg);
+}
+
 static void count_scalar_item(const cbor_reader_t *reader,
 			      const cbor_item_t *item,
 			      const cbor_item_t *parent, void *arg)
@@ -902,4 +936,124 @@ TEST(Helper, ShouldDispatch_WhenTaggedValueUnderStringKey)
 					 parsers, sizeof(parsers) / sizeof(*parsers),
 					 msg, sizeof(msg), &count));
 	LONGS_EQUAL(1, count);
+}
+
+TEST(Helper, ShouldFireCallback_WhenPathMatchesMapContainer)
+{
+	/* {"info": {"a": 1, "b": 2}} */
+	static const uint8_t msg[] = {
+		0xA1, 0x64, 0x69, 0x6E, 0x66, 0x6F,
+		0xA2, 0x61, 0x61, 0x01, 0x61, 0x62, 0x02
+	};
+
+	int count = 0;
+	auto on_info = [](const cbor_reader_t *, const struct cbor_parser *,
+			  const cbor_item_t *item, void *arg) {
+		LONGS_EQUAL(CBOR_ITEM_MAP, item->type);
+		(*static_cast<int *>(arg))++;
+	};
+	const struct cbor_parser parsers[] = {
+		CBOR_PATH_INLINE(on_info, CBOR_STR_SEG("info")),
+	};
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), &count));
+	LONGS_EQUAL(1, count);
+}
+
+TEST(Helper, cbor_dispatch_ShouldDispatchFromRoot_WhenContainerIsNull)
+{
+	/* {"a": 1, "b": 2} */
+	static const uint8_t msg[] = {
+		0xA2, 0x61, 0x61, 0x01, 0x61, 0x62, 0x02
+	};
+
+	size_t n = 0;
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
+
+	const struct cbor_parser parsers[] = {
+		CBOR_PATH_INLINE(on_sub_item, CBOR_STR_SEG("a")),
+		CBOR_PATH_INLINE(on_sub_item, CBOR_STR_SEG("b")),
+	};
+
+	mock().expectOneCall("a");
+	mock().expectOneCall("b");
+
+	LONGS_EQUAL(true, cbor_dispatch(&reader, NULL,
+					parsers, sizeof(parsers) / sizeof(*parsers),
+					nullptr));
+}
+
+TEST(Helper, cbor_dispatch_ShouldFail_WhenContainerIsNotFromReader)
+{
+	/* {"a": 1} */
+	static const uint8_t msg[] = {
+		0xA1, 0x61, 0x61, 0x01
+	};
+
+	cbor_item_t foreign = {
+		.type = CBOR_ITEM_MAP,
+	};
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
+	LONGS_EQUAL(false, cbor_dispatch(&reader, &foreign, NULL, 0, nullptr));
+}
+
+TEST(Helper, cbor_dispatch_ShouldFail_WhenContainerSizeExceedsParsedChildren)
+{
+	/* {"a": 1} */
+	static const uint8_t msg[] = {
+		0xA1, 0x61, 0x61, 0x01
+	};
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
+	reader.items[0].size = 2;
+
+	LONGS_EQUAL(false, cbor_dispatch(&reader, &reader.items[0], NULL, 0,
+				nullptr));
+}
+
+TEST(Helper, cbor_dispatch_ShouldDispatchSubMap_WhenContainerIsMap)
+{
+	/* {"info": {"a": 1, "b": 2}} */
+	static const uint8_t msg[] = {
+		0xA1, 0x64, 0x69, 0x6E, 0x66, 0x6F,
+		0xA2, 0x61, 0x61, 0x01, 0x61, 0x62, 0x02
+	};
+
+	const struct cbor_parser parsers[] = {
+		CBOR_PATH_INLINE(on_sub_dispatch, CBOR_STR_SEG("info")),
+	};
+
+	mock().expectOneCall("a");
+	mock().expectOneCall("b");
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), nullptr));
+}
+
+TEST(Helper, cbor_dispatch_ShouldDispatchEachArrayElement_WhenWildcardUsed)
+{
+	/* {"sounds": [{"id": 0}, {"id": 1}]} */
+	static const uint8_t msg[] = {
+		0xA1, 0x66, 0x73, 0x6F, 0x75, 0x6E, 0x64, 0x73,
+		0x82,
+		0xA1, 0x62, 0x69, 0x64, 0x00,
+		0xA1, 0x62, 0x69, 0x64, 0x01
+	};
+
+	const struct cbor_parser parsers[] = {
+		CBOR_PATH_INLINE(on_array_elem_dispatch,
+				 CBOR_STR_SEG("sounds"), CBOR_ANY_SEG()),
+	};
+
+	mock().expectNCalls(2, "id");
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), nullptr));
 }

@@ -8,7 +8,8 @@
  * Path-based dispatch example.
  *
  * This example demonstrates how to use cbor_unmarshal() with the path-based
- * API to precisely target leaf nodes in arbitrarily nested CBOR structures.
+ * API to target both leaf nodes and matching MAP/ARRAY container nodes in
+ * arbitrarily nested CBOR structures.
  *
  * The CBOR_PATH macro and CBOR_STR_SEG / CBOR_INT_SEG / CBOR_IDX_SEG helpers
  * build a cbor_parser whose path is verified against the current position in
@@ -28,6 +29,11 @@
  * depth3_arr – array of maps
  *   { "items": [ { "name": "foo" }, { "name": "bar" } ] }
  *   Array elements are addressed via CBOR_IDX_SEG.
+ *
+ * depth3_container – container callback dispatch
+ *   { "info": { "a": 1, "b": 2 } }
+ *   cbor_unmarshal() first matches the "info" MAP container, then the
+ *   callback uses cbor_dispatch() to dispatch that container's children.
  *
  * depth4 – deeply nested config
  *   { "config": { "network": { "wifi":    { "ssid": "MyNet",
@@ -260,6 +266,88 @@ static void depth3_arr_example(void)
 			names[0], names[1]);
 }
 
+/* depth3_container – matching a MAP container, then dispatching its children */
+struct info_values {
+	int32_t a;
+	int32_t b;
+};
+
+static void on_info_a(const cbor_reader_t *reader,
+		const struct cbor_parser *parser,
+		const cbor_item_t *item, void *arg)
+{
+	(void)parser;
+	struct info_values *values = (struct info_values *)arg;
+
+	cbor_decode(reader, item, &values->a, sizeof(values->a));
+}
+
+static void on_info_b(const cbor_reader_t *reader,
+		const struct cbor_parser *parser,
+		const cbor_item_t *item, void *arg)
+{
+	(void)parser;
+	struct info_values *values = (struct info_values *)arg;
+
+	cbor_decode(reader, item, &values->b, sizeof(values->b));
+}
+
+static void on_info_container(const cbor_reader_t *reader,
+		const struct cbor_parser *parser,
+		const cbor_item_t *item, void *arg)
+{
+	(void)parser;
+
+	static const struct cbor_path_segment path_info_a[] = {
+		CBOR_STR_SEG("a")
+	};
+	static const struct cbor_path_segment path_info_b[] = {
+		CBOR_STR_SEG("b")
+	};
+	static const struct cbor_parser info_parsers[] = {
+		CBOR_PATH(path_info_a, on_info_a),
+		CBOR_PATH(path_info_b, on_info_b),
+	};
+
+	if (item->type != CBOR_ITEM_MAP) {
+		return;
+	}
+
+	cbor_dispatch(reader, item,
+			info_parsers, sizeof(info_parsers) / sizeof(*info_parsers),
+			arg);
+}
+
+static void depth3_container_example(void)
+{
+	/* {"info": {"a": 1, "b": 2}} */
+	const uint8_t msg[] = {
+		0xA1,
+		  0x64, 'i','n','f','o',
+		  0xA2,
+		    0x61, 'a', 0x01,
+		    0x61, 'b', 0x02,
+	};
+	static const struct cbor_path_segment path_info[] = {
+		CBOR_STR_SEG("info")
+	};
+	static const struct cbor_parser parsers[] = {
+		CBOR_PATH(path_info, on_info_container),
+	};
+
+	cbor_reader_t reader;
+	cbor_item_t items[8];
+	struct info_values values;
+	memset(&values, 0, sizeof(values));
+
+	cbor_reader_init(&reader, items, sizeof(items) / sizeof(*items));
+	cbor_unmarshal(&reader, parsers, sizeof(parsers) / sizeof(*parsers),
+			msg, sizeof(msg), &values);
+
+	printf("[depth3_container] info.a=%ld info.b=%ld\n",
+			(long)values.a, (long)values.b);
+}
+
 /* depth4 – deeply nested config */
 struct net_cfg {
 	char wifi_ssid[32];
@@ -365,5 +453,6 @@ void path_dispatch_example(void)
 	depth1_example();
 	depth2_example();
 	depth3_arr_example();
+	depth3_container_example();
 	depth4_example();
 }

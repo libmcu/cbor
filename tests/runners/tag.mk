@@ -9,6 +9,7 @@ SRC_FILES = \
 	../src/parser.c \
 	../src/decoder.c \
 	../src/helper.c \
+	../src/stringify.c \
 
 TEST_SRC_FILES = \
 	src/tag_test.cpp \
