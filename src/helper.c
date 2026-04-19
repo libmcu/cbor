@@ -601,7 +601,7 @@ bool cbor_dispatch(const cbor_reader_t *reader,
 	}
 
 	if (nr_children > remaining) {
-		nr_children = remaining;
+		return false;
 	}
 
 	dispatch_each(reader, container + 1, nr_children,

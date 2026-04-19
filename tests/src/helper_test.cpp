@@ -1001,6 +1001,21 @@ TEST(Helper, cbor_dispatch_ShouldFail_WhenContainerIsNotFromReader)
 	LONGS_EQUAL(false, cbor_dispatch(&reader, &foreign, NULL, 0, nullptr));
 }
 
+TEST(Helper, cbor_dispatch_ShouldFail_WhenContainerSizeExceedsParsedChildren)
+{
+	/* {"a": 1} */
+	static const uint8_t msg[] = {
+		0xA1, 0x61, 0x61, 0x01
+	};
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
+	reader.items[0].size = 2;
+
+	LONGS_EQUAL(false, cbor_dispatch(&reader, &reader.items[0], NULL, 0,
+				nullptr));
+}
+
 TEST(Helper, cbor_dispatch_ShouldDispatchSubMap_WhenContainerIsMap)
 {
 	/* {"info": {"a": 1, "b": 2}} */

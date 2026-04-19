@@ -14,7 +14,7 @@ const char *cbor_stringify_error(cbor_error_t err)
 	case CBOR_INVALID:
 		return "invalid";
 	case CBOR_OVERRUN:
-		return "buffer overrun";
+		return "out of memory";
 	case CBOR_BREAK:
 		return "break";
 	case CBOR_EXCESSIVE:
