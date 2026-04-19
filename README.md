@@ -36,6 +36,39 @@ set(CBOR_ROOT <THIRD_PARTY_DIR>/cbor)
 include(${CBOR_ROOT}/cbor.cmake)
 ```
 
+### Zephyr
+
+Add the module to your west manifest:
+
+```yaml
+# west.yml
+manifest:
+  projects:
+    - name: cbor
+      url: https://github.com/libmcu/cbor.git
+      revision: main
+      path: modules/lib/cbor
+```
+
+Enable in `prj.conf`:
+
+```conf
+CONFIG_LIBMCU_CBOR=y
+```
+
+### ESP-IDF
+
+Clone or add as a git submodule under your project's `components/` directory:
+
+```bash
+cd components
+git submodule add https://github.com/libmcu/cbor.git cbor
+```
+
+No wrapper `CMakeLists.txt` is needed. The root `CMakeLists.txt` auto-detects
+the ESP-IDF build environment via `ESP_PLATFORM` and calls
+`idf_component_register()` accordingly.
+
 ## Usage
 
 `cbor_unmarshal()` dispatches parsed CBOR nodes to registered callbacks by

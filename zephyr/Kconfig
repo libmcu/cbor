@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+
+config LIBMCU_CBOR
+	bool "libmcu CBOR (RFC 8949) encoder/decoder"
+	help
+	  Minimalistic CBOR encoder/decoder from libmcu.
+	  C99, no heap allocation.
