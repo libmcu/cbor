@@ -111,7 +111,7 @@ static const struct cbor_path_segment path_item0_name[] = {
 ```
 
 Please refer to [examples](examples) for complete runnable code including
-depth-4 nested maps and mixed string/integer/index paths.
+depth-4 nested maps, container callbacks, and mixed string/integer/index paths.
 
 ### Option
 

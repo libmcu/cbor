@@ -8,6 +8,10 @@
 #include "CppUTest/TestHarness_c.h"
 #include "CppUTestExt/MockSupport.h"
 
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+
 #include "example.h"
 #include "cbor/encoder.h"
 
@@ -33,6 +37,35 @@ static void print(void const *data, size_t datasize)
 	mock().actualCall(__func__)
 		.withParameterOfType("stringType", "data", data)
 		.withParameter("datasize", datasize);
+}
+
+static void capture_stdout(void (*fn)(void), char *buf, size_t bufsize)
+{
+	CHECK_TEXT(buf != NULL, "buf is NULL");
+	CHECK_TEXT(bufsize > 0, "bufsize is zero");
+	buf[0] = '\0';
+
+	if (bufsize == 1) {
+		return;
+	}
+
+	FILE *tmp = tmpfile();
+	CHECK_TEXT(tmp != NULL, "tmpfile failed");
+
+	int saved_stdout = dup(fileno(stdout));
+	CHECK_TEXT(saved_stdout >= 0, "dup failed");
+	CHECK_TEXT(dup2(fileno(tmp), fileno(stdout)) >= 0, "dup2 redirect failed");
+
+	fn();
+	fflush(stdout);
+
+	CHECK_TEXT(dup2(saved_stdout, fileno(stdout)) >= 0, "dup2 restore failed");
+	close(saved_stdout);
+
+	rewind(tmp);
+	size_t n = fread(buf, 1, bufsize - 1, tmp);
+	buf[n] = '\0';
+	fclose(tmp);
 }
 
 TEST_GROUP(Example) {
@@ -144,4 +177,25 @@ TEST(Example, ShouldPrintString_WhenSimpleExampleCalled) {
 		.withParameter("datasize", 4);
 
 	simple_example(print);
+}
+
+TEST(Example, ShouldPrintExpectedOutput_WhenPathDispatchExampleCalled) {
+	char output[512];
+
+	capture_stdout(path_dispatch_example, output, sizeof(output));
+
+	CHECK_TEXT(strstr(output, "[depth1] name = Alice\n") != NULL, output);
+	CHECK_TEXT(strstr(output,
+			"[depth2] dev.id=DEV_BA dev.url=http://dev\n") != NULL, output);
+	CHECK_TEXT(strstr(output,
+			"[depth2] prod.id=PRD_BA prod.url=http://prod\n") != NULL,
+			output);
+	CHECK_TEXT(strstr(output,
+			"[depth3_arr] items[0].name=foo items[1].name=bar\n") != NULL,
+			output);
+	CHECK_TEXT(strstr(output,
+			"[depth3_container] info.a=1 info.b=2\n") != NULL, output);
+	CHECK_TEXT(strstr(output,
+			"[depth4] wifi.ssid=MyNet wifi.pass=secret eth.ip=10.0.0.1\n")
+			!= NULL, output);
 }
