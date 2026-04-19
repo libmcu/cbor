@@ -970,7 +970,7 @@ TEST(Helper, cbor_dispatch_ShouldDispatchFromRoot_WhenContainerIsNull)
 	};
 
 	size_t n = 0;
-	cbor_parse(&reader, msg, sizeof(msg), &n);
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
 
 	const struct cbor_parser parsers[] = {
 		CBOR_PATH_INLINE(on_sub_item, CBOR_STR_SEG("a")),
@@ -983,6 +983,22 @@ TEST(Helper, cbor_dispatch_ShouldDispatchFromRoot_WhenContainerIsNull)
 	LONGS_EQUAL(true, cbor_dispatch(&reader, NULL,
 					parsers, sizeof(parsers) / sizeof(*parsers),
 					nullptr));
+}
+
+TEST(Helper, cbor_dispatch_ShouldFail_WhenContainerIsNotFromReader)
+{
+	/* {"a": 1} */
+	static const uint8_t msg[] = {
+		0xA1, 0x61, 0x61, 0x01
+	};
+
+	cbor_item_t foreign = {
+		.type = CBOR_ITEM_MAP,
+	};
+	size_t n = 0;
+
+	LONGS_EQUAL(CBOR_SUCCESS, cbor_parse(&reader, msg, sizeof(msg), &n));
+	LONGS_EQUAL(false, cbor_dispatch(&reader, &foreign, NULL, 0, nullptr));
 }
 
 TEST(Helper, cbor_dispatch_ShouldDispatchSubMap_WhenContainerIsMap)

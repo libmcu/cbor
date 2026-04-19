@@ -540,6 +540,19 @@ bool cbor_unmarshal(cbor_reader_t *reader, const struct cbor_parser *parsers,
 	return true;
 }
 
+static bool find_item_index(const cbor_reader_t *reader,
+		const cbor_item_t *item, size_t *idx)
+{
+	for (size_t i = 0; i < reader->itemidx; i++) {
+		if (&reader->items[i] == item) {
+			*idx = i;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool cbor_dispatch(const cbor_reader_t *reader,
 		const cbor_item_t *container,
 		const struct cbor_parser *parsers, size_t nr_parsers,
@@ -563,8 +576,9 @@ bool cbor_dispatch(const cbor_reader_t *reader,
 		return true;
 	}
 
-	if (container < reader->items ||
-			container >= reader->items + reader->itemidx) {
+	size_t item_idx;
+
+	if (!find_item_index(reader, container, &item_idx)) {
 		return false;
 	}
 	if (container->type != CBOR_ITEM_MAP &&
@@ -572,7 +586,6 @@ bool cbor_dispatch(const cbor_reader_t *reader,
 		return false;
 	}
 
-	size_t item_idx  = (size_t)(container - reader->items);
 	size_t remaining = reader->itemidx - item_idx - 1;
 	size_t nr_children;
 

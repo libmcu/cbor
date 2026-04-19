@@ -164,6 +164,11 @@ struct cbor_parser {
 /**
  * @brief Unmarshal CBOR message using parser table.
  *
+ * Parser callbacks are invoked when the declared path matches a parsed item.
+ * Matching items may be scalar values, indefinite-length strings, or MAP/ARRAY
+ * containers. If the root item is a MAP or ARRAY, a depth-0 parser can match
+ * and receive that root container.
+ *
  * @param[in,out] reader     CBOR reader context.
  * @param[in]     parsers    Array of parser definitions.
  * @param[in]     nr_parsers Number of parsers in the array.
@@ -179,11 +184,13 @@ bool cbor_unmarshal(cbor_reader_t *reader,
 /**
  * @brief Dispatch CBOR items in a container using parser table.
  *
- * Allows dispatching from a specific container (map or array) or from
- * the root if container is NULL.
+ * Allows dispatching the children of a specific container (map or array), or
+ * dispatching from the root if container is NULL. When a non-NULL container is
+ * given, the container item itself is not dispatched.
  *
  * @param[in]     reader     CBOR reader context.
- * @param[in]     container  Container item (map/array), or NULL for root.
+ * @param[in]     container  Container item (map/array) from reader->items, or
+ *                           NULL for root dispatch.
  * @param[in]     parsers    Array of parser definitions.
  * @param[in]     nr_parsers Number of parsers in the array.
  * @param[in,out] arg        User argument passed to callbacks.

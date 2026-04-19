@@ -502,7 +502,10 @@ how many tags are stacked.
 * `cbor_unmarshal()` supports map (string or integer keys) and array (index)
   path segments; if the CBOR message root is neither a map nor an array, no
   path segment is pushed and only depth-0 parsers will match
-* `cbor_unmarshal()` dispatches only leaf (scalar) nodes and indefinite-length
-  strings to registered callbacks; MAP and ARRAY container nodes themselves are
-  not dispatched even when a path matches them. Use `cbor_iterate()` to
-  traverse a container's subtree directly
+* `cbor_unmarshal()` may dispatch matching MAP and ARRAY container nodes in
+  addition to scalar values and indefinite-length strings. If the root item is
+  a MAP or ARRAY, a depth-0 parser can match and receive that root container
+* `cbor_dispatch()` dispatches from the root when `container == NULL`; when a
+  non-NULL container is given, it must point to an item stored in
+  `reader->items` from the same reader and only that container's children are
+  dispatched
