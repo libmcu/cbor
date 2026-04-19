@@ -44,8 +44,8 @@ typedef enum {
 
 struct cbor_path_segment {
 	cbor_key_type_t type;
-	intptr_t        val; /* STR: (intptr_t)ptr; INT/IDX: signed index */
-	size_t          len; /* STR: byte length; otherwise 0 */
+	intptr_t val; /* STR: (intptr_t)ptr; INT/IDX: signed index */
+	size_t len; /* STR: byte length; otherwise 0 */
 };
 
 struct cbor_parser {
@@ -71,15 +71,34 @@ struct cbor_parser {
 
 /* CBOR_PATH(path_arr, fn) - declare a cbor_parser from a named path array.
  *
- * path_arr MUST be a named array variable, not a pointer.  sizeof() computes
+ * path_arr MUST be a named array variable, not a pointer. sizeof() computes
  * the element count at compile time so depth stays in sync automatically.
  *
  * Maximum matchable depth is CBOR_RECURSION_MAX_LEVEL (default 8).
  * Use CBOR_PATH_DECL to catch depth violations at compile time. */
-#define CBOR_PATH(path_arr, fn) \
-	{ .path  = (path_arr), \
-	  .depth = sizeof(path_arr) / sizeof((path_arr)[0]), \
-	  .run   = (fn) }
+#define CBOR_PATH(path_arr, fn) { \
+	.path = (path_arr), \
+	.depth = sizeof(path_arr) / sizeof((path_arr)[0]), \
+	.run = (fn) \
+}
+
+/* CBOR_PATH_INLINE(fn, seg, ...) - declare a cbor_parser with inline path
+ * segments, without a named path array variable.
+ *
+ * Segments are passed as CBOR_STR_SEG / CBOR_INT_SEG / CBOR_IDX_SEG /
+ * CBOR_ANY_SEG() initializers.
+ *
+ * Example (depth 1):
+ *   CBOR_PATH_INLINE(do_reboot, CBOR_STR_SEG("reboot"))
+ * Example (depth 2):
+ *   CBOR_PATH_INLINE(NULL, CBOR_STR_SEG("srv"), CBOR_STR_SEG("url"))
+ */
+#define CBOR_PATH_INLINE(fn, ...) { \
+	.path = (const struct cbor_path_segment[]){ __VA_ARGS__ }, \
+	.depth = sizeof((const struct cbor_path_segment[]){ __VA_ARGS__ }) / \
+		sizeof(struct cbor_path_segment), \
+	.run = (fn) \
+}
 
 /* CBOR_PATH_DECL(var, path_arr, fn) - declare a cbor_parser with a
  * compile-time check that the path depth does not exceed
