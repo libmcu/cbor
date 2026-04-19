@@ -772,6 +772,68 @@ TEST(Helper, ShouldFireWildcard_WhenNoExactParserMatchesCurrentItem)
 					 msg, sizeof(msg), nullptr));
 }
 
+TEST(Helper, ShouldDispatch_WhenUsedWithCborPathInline_Depth1)
+{
+	/* {"certificate": "your-cert", "privateKey": "your-private-key"} */
+	static const uint8_t msg[] = {
+		0xA2, 0x6B, 0x63, 0x65, 0x72, 0x74, 0x69, 0x66, 0x69,
+		0x63, 0x61, 0x74, 0x65, 0x69, 0x79, 0x6F, 0x75, 0x72,
+		0x2D, 0x63, 0x65, 0x72, 0x74, 0x6A, 0x70, 0x72, 0x69,
+		0x76, 0x61, 0x74, 0x65, 0x4B, 0x65, 0x79, 0x70, 0x79,
+		0x6F, 0x75, 0x72, 0x2D, 0x70, 0x72, 0x69, 0x76, 0x61,
+		0x74, 0x65, 0x2D, 0x6B, 0x65, 0x79
+	};
+
+	const struct cbor_parser parsers[] = {
+		CBOR_PATH_INLINE(on_item, CBOR_STR_SEG("certificate")),
+		CBOR_PATH_INLINE(on_item, CBOR_STR_SEG("privateKey")),
+	};
+
+	mock().expectOneCall("certificate");
+	mock().expectOneCall("privateKey");
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), nullptr));
+}
+
+TEST(Helper, ShouldDispatch_WhenUsedWithCborPathInline_Depth2)
+{
+	/*
+	 * {"dev":  {"ba_id": "evse", "url": "wss://a"},
+	 *  "prod": {"ba_id": "user", "url": "wss://b"}}
+	 */
+	static const uint8_t msg[] = {
+		0xA2, 0x63, 0x64, 0x65, 0x76, 0xA2, 0x65, 0x62, 0x61,
+		0x5F, 0x69, 0x64, 0x64, 0x65, 0x76, 0x73, 0x65, 0x63,
+		0x75, 0x72, 0x6C, 0x67, 0x77, 0x73, 0x73, 0x3A, 0x2F,
+		0x2F, 0x61, 0x64, 0x70, 0x72, 0x6F, 0x64, 0xA2, 0x65,
+		0x62, 0x61, 0x5F, 0x69, 0x64, 0x64, 0x75, 0x73, 0x65,
+		0x72, 0x63, 0x75, 0x72, 0x6C, 0x67, 0x77, 0x73, 0x73,
+		0x3A, 0x2F, 0x2F, 0x62
+	};
+
+	auto on_dev_url = [](const cbor_reader_t *, const struct cbor_parser *,
+			     const cbor_item_t *, void *) {
+		mock().actualCall("dev/url");
+	};
+	auto on_prod_url = [](const cbor_reader_t *, const struct cbor_parser *,
+			      const cbor_item_t *, void *) {
+		mock().actualCall("prod/url");
+	};
+	const struct cbor_parser parsers[] = {
+		CBOR_PATH_INLINE(on_dev_url,  CBOR_STR_SEG("dev"),  CBOR_STR_SEG("url")),
+		CBOR_PATH_INLINE(on_prod_url, CBOR_STR_SEG("prod"), CBOR_STR_SEG("url")),
+	};
+
+	mock().expectOneCall("dev/url");
+	mock().expectOneCall("prod/url");
+
+	LONGS_EQUAL(true, cbor_unmarshal(&reader,
+					 parsers, sizeof(parsers) / sizeof(*parsers),
+					 msg, sizeof(msg), nullptr));
+}
+
 TEST(Helper, ShouldDispatch_WhenTaggedValueUnderStringKey)
 {
 	/* {"ts": tag(1, 1000000000)} */

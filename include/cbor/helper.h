@@ -85,6 +85,13 @@ struct cbor_parser {
 /* CBOR_PATH_INLINE(fn, seg, ...) - declare a cbor_parser with inline path
  * segments, without a named path array variable.
  *
+ * In C (C99/C11): uses compound literals; depth is computed at compile time
+ * via sizeof. No compile-time depth-limit check; use CBOR_PATH_DECL for that.
+ *
+ * In C++11 and later: uses an immediately-invoked lambda with a static
+ * segment array. Includes a compile-time depth check against
+ * CBOR_RECURSION_MAX_LEVEL.
+ *
  * Segments are passed as CBOR_STR_SEG / CBOR_INT_SEG / CBOR_IDX_SEG /
  * CBOR_ANY_SEG() initializers.
  *
@@ -93,12 +100,29 @@ struct cbor_parser {
  * Example (depth 2):
  *   CBOR_PATH_INLINE(NULL, CBOR_STR_SEG("srv"), CBOR_STR_SEG("url"))
  */
+#if defined(__cplusplus)
+#define CBOR_PATH_INLINE(fn, ...) \
+	([&]() -> struct cbor_parser { \
+		static const struct cbor_path_segment cbor_path_segs_[] = { __VA_ARGS__ }; \
+		static_assert( \
+			sizeof(cbor_path_segs_) / sizeof(cbor_path_segs_[0]) \
+				<= CBOR_RECURSION_MAX_LEVEL, \
+			"CBOR_PATH_INLINE: path depth exceeds CBOR_RECURSION_MAX_LEVEL"); \
+		struct cbor_parser cbor_p_ = { \
+			cbor_path_segs_, \
+			sizeof(cbor_path_segs_) / sizeof(cbor_path_segs_[0]), \
+			(fn) \
+		}; \
+		return cbor_p_; \
+	}())
+#else
 #define CBOR_PATH_INLINE(fn, ...) { \
 	.path = (const struct cbor_path_segment[]){ __VA_ARGS__ }, \
 	.depth = sizeof((const struct cbor_path_segment[]){ __VA_ARGS__ }) / \
 		sizeof(struct cbor_path_segment), \
 	.run = (fn) \
 }
+#endif
 
 /* CBOR_PATH_DECL(var, path_arr, fn) - declare a cbor_parser with a
  * compile-time check that the path depth does not exceed
