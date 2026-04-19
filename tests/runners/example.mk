@@ -11,6 +11,7 @@ SRC_FILES = \
 	../src/decoder.c \
 	../src/parser.c \
 	../src/helper.c \
+	../src/stringify.c \
 	../src/common.c \
 
 TEST_SRC_FILES = \

@@ -10,6 +10,7 @@ CBOR_SRCS := \
 	$(cbor-basedir)src/decoder.c \
 	$(cbor-basedir)src/encoder.c \
 	$(cbor-basedir)src/helper.c \
+	$(cbor-basedir)src/stringify.c \
 	$(cbor-basedir)src/ieee754.c \
 	$(cbor-basedir)src/stream.c \
 

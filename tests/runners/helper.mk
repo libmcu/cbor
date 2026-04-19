@@ -4,6 +4,7 @@ COMPONENT_NAME = helper
 
 SRC_FILES = \
 	../src/helper.c \
+	../src/stringify.c \
 	../src/decoder.c \
 	../src/parser.c \
 	../src/common.c \
